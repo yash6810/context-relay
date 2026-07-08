@@ -52,7 +52,103 @@ function formatPrimer(project: Project): string {
   return sections.join("\n");
 }
 
-function PrimerBlock({ primer }: { primer: Primer }) {
+/* ── Export helpers ────────────────────────────── */
+
+function downloadFile(content: string, filename: string, mime: string) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportAsMarkdown(content: string, projectName: string) {
+  const frontmatter = `# Primer: ${projectName}\n\n`;
+  downloadFile(frontmatter + content, `${projectName.replace(/\s+/g, "-").toLowerCase()}-primer.md`, "text/markdown");
+}
+
+function exportAsJSON(content: string, projectName: string, createdAt: string) {
+  const json = JSON.stringify({ project: projectName, createdAt, content }, null, 2);
+  downloadFile(json, `${projectName.replace(/\s+/g, "-").toLowerCase()}-primer.json`, "application/json");
+}
+
+async function copyShareLink(primerId: string, projectName: string): Promise<boolean> {
+  const url = `${window.location.origin}/projects/${primerId}?share=1`;
+  try {
+    await navigator.clipboard.writeText(url);
+    return true;
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = url;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    return true;
+  }
+}
+
+/* ── Export dropdown ───────────────────────────── */
+
+function ExportMenu({ content, projectName, primerId, createdAt }: { content: string; projectName: string; primerId: string; createdAt: string }) {
+  const [open, setOpen] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  const handleMarkdown = () => {
+    exportAsMarkdown(content, projectName);
+    setOpen(false);
+  };
+  const handleJSON = () => {
+    exportAsJSON(content, projectName, createdAt);
+    setOpen(false);
+  };
+  const handleShare = async () => {
+    await copyShareLink(primerId, projectName);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+    setOpen(false);
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-card border border-border text-muted-fg hover:text-fg hover:border-accent transition-all duration-150 cursor-pointer focus-visible:ring-2 focus-visible:ring-accent"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" x2="12" y1="15" y2="3" />
+        </svg>
+        Export
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-1 z-20 w-44 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
+            <button onClick={handleMarkdown} className="w-full text-left px-4 py-2.5 text-sm text-fg hover:bg-muted transition-colors duration-100 cursor-pointer flex items-center gap-2">
+              <span className="text-xs">📝</span> Markdown (.md)
+            </button>
+            <button onClick={handleJSON} className="w-full text-left px-4 py-2.5 text-sm text-fg hover:bg-muted transition-colors duration-100 cursor-pointer flex items-center gap-2 border-t border-border">
+              <span className="text-xs">📄</span> JSON (.json)
+            </button>
+            <button onClick={handleShare} className="w-full text-left px-4 py-2.5 text-sm text-fg hover:bg-muted transition-colors duration-100 cursor-pointer flex items-center gap-2 border-t border-border">
+              <span className="text-xs">🔗</span> {linkCopied ? "Link copied!" : "Shareable link"}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ── PrimerBlock ───────────────────────────────── */
+
+function PrimerBlock({ primer, projectName }: { primer: Primer; projectName: string }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(async () => {
@@ -76,31 +172,34 @@ function PrimerBlock({ primer }: { primer: Primer }) {
 
   return (
     <div className="border border-border rounded-xl overflow-hidden">
-      <div className="bg-muted px-4 py-2.5 flex items-center justify-between">
+      <div className="bg-muted px-4 py-2.5 flex items-center justify-between gap-2 flex-wrap">
         <span className="text-xs text-muted-fg font-medium">
           {relativeTime(primer.createdAt)}
         </span>
-        <button
-          onClick={handleCopy}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-card border border-border text-muted-fg hover:text-fg hover:border-accent transition-all duration-150 cursor-pointer focus-visible:ring-2 focus-visible:ring-accent"
-        >
-          {copied ? (
-            <>
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 6 9 17l-5-5" />
-              </svg>
-              Copied!
-            </>
-          ) : (
-            <>
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-                <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-              </svg>
-              Copy
-            </>
-          )}
-        </button>
+        <div className="flex items-center gap-2">
+          <ExportMenu content={primer.content} projectName={projectName} primerId={primer.id} createdAt={primer.createdAt} />
+          <button
+            onClick={handleCopy}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-card border border-border text-muted-fg hover:text-fg hover:border-accent transition-all duration-150 cursor-pointer focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            {copied ? (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+                Copied!
+              </>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                  <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                </svg>
+                Copy
+              </>
+            )}
+          </button>
+        </div>
       </div>
       <pre className="p-4 text-sm font-mono whitespace-pre-wrap overflow-x-auto text-fg">
         {primer.content}
@@ -108,6 +207,8 @@ function PrimerBlock({ primer }: { primer: Primer }) {
     </div>
   );
 }
+
+/* ── Page ──────────────────────────────────────── */
 
 export default function PrimerView() {
   const { id } = useParams<{ id: string }>();
@@ -243,6 +344,18 @@ export default function PrimerView() {
           <p className="text-sm text-muted-fg mt-1">
             Updated {relativeTime(project.updatedAt)}
           </p>
+          {project.tags && project.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {project.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-accent-light text-accent"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         <Link
           to={`/projects/${project.id}/edit`}
@@ -318,29 +431,32 @@ export default function PrimerView() {
 
         {showPrimer && currentPrimerContent && (
           <div className="mt-6 space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <p className="text-sm font-medium text-muted-fg">Generated Primer</p>
-              <button
-                onClick={handleCopyCurrent}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-card border border-border text-muted-fg hover:text-fg hover:border-accent transition-all duration-150 cursor-pointer focus-visible:ring-2 focus-visible:ring-accent"
-              >
-                {copied ? (
-                  <>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M20 6 9 17l-5-5" />
-                    </svg>
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-                    </svg>
-                    Copy to Clipboard
-                  </>
-                )}
-              </button>
+              <div className="flex items-center gap-2">
+                <ExportMenu content={currentPrimerContent} projectName={project.name} primerId={"current"} createdAt={new Date().toISOString()} />
+                <button
+                  onClick={handleCopyCurrent}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-card border border-border text-muted-fg hover:text-fg hover:border-accent transition-all duration-150 cursor-pointer focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  {copied ? (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 6 9 17l-5-5" />
+                      </svg>
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                        <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                      </svg>
+                      Copy to Clipboard
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
             <pre className="bg-muted rounded-lg p-4 text-sm font-mono whitespace-pre-wrap overflow-x-auto border border-border">
               {currentPrimerContent}
@@ -409,7 +525,7 @@ export default function PrimerView() {
                 </button>
                 {expandedHistoryId === primer.id && (
                   <div className="mt-2 ml-4">
-                    <PrimerBlock primer={primer} />
+                    <PrimerBlock primer={primer} projectName={project.name} />
                   </div>
                 )}
               </div>

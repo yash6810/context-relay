@@ -1,14 +1,14 @@
-<｜DSML｜parameter name="content" string="true"># Context Relay
+# Context Relay
 
-> **Never lose your AI context again. Capture, organize, and relay project context across ChatGPT, Claude, and Gemini — instantly.**
+> **Never lose your AI context again. Capture, organize, and relay project context across ChatGPT, Claude, Gemini, Perplexity, Grok, and Mistral — instantly.**
 
-Context Relay is a Chrome extension that saves you from the endless cycle of re-explaining your project every time you switch AI assistants. Define your project context once, generate a structured "primer," and inject it into any supported AI chat with a single click.
+Context Relay is a browser extension that saves you from the endless cycle of re-explaining your project every time you switch AI assistants. Define your project context once, generate a structured "primer," and inject it into any supported AI chat with a single click.
 
 ---
 
 ## The Problem
 
-You work across multiple AI tools — ChatGPT for brainstorming, Claude for deep analysis, Gemini for research. Every time you switch, you have to re-explain:
+You work across multiple AI tools — ChatGPT for brainstorming, Claude for deep analysis, Gemini for research, Perplexity for discovery, Grok for real-time data. Every time you switch, you have to re-explain:
 
 - What you're building
 - Key decisions already made
@@ -26,9 +26,9 @@ Context Relay lets you **define a project once**, generate a structured primer, 
 ## Features
 
 ### 📦 Project Management
-- Create and organize projects with full context: current task, key decisions, relevant links, and notes
+- Create and organize projects with full context: current task, key decisions, relevant links, notes, and tags
 - Edit and update projects as your context evolves
-- Clean card-based dashboard with sorting by last updated
+- Clean card-based dashboard with search, tag filtering, and sorting
 
 ### 📝 Primer Generation
 - Generate structured, formatted primers from your project context
@@ -40,15 +40,31 @@ Context Relay lets you **define a project once**, generate a structured primer, 
 - **ChatGPT** — Floating relay button on chatgpt.com
 - **Claude** — Floating relay button on claude.ai
 - **Gemini** — Floating relay button on gemini.google.com
+- **Perplexity** — Floating relay button on perplexity.ai
+- **Grok** — Floating relay button on grok.com
+- **Mistral** — Floating relay button on chat.mistral.ai
 - Select a project and inject its primer directly into the chat input
 
 ### 🔍 Search / Filter
 - Search across all primers by project or keyword
 - Instant filtering as you type
+- Tag-based filtering on the dashboard
+- Filter primers by project on the History page
 
 ### 📥 Export
-- Download primers as Markdown, JSON, or shareable link
-- Preserve formatting and structure in every format
+- Download individual primers as Markdown (.md) or JSON (.json)
+- Export all primers at once from the History page
+- Copy shareable links to individual primers
+
+### 🏷️ Tags
+- Add comma-separated tags to any project
+- Filter projects by tag on the dashboard
+- Color-coded tags for quick visual scanning
+
+### 📋 Template Library
+- Pre-built project templates for common workflows
+- Templates for: Web Apps, Mobile Apps, REST APIs, Browser Extensions, Landing Pages, AI Agents
+- Quick-start any project from a template with placeholder fields
 
 ### 🌙 Modern UI
 - Clean, minimal design with indigo accent
@@ -78,9 +94,9 @@ Context Relay lets you **define a project once**, generate a structured primer, 
                │
 ┌──────────────▼───────────────────────────────────┐
 │              Content Scripts                      │
-│  ┌──────────┬───────────┬──────────────┐         │
-│  │ ChatGPT  │  Claude   │   Gemini     │         │
-│  └──────────┴───────────┴──────────────┘         │
+│  ┌──────────┬───────────┬────────────┬───────┐   │
+│  │ ChatGPT  │  Claude   │   Gemini   │  ...  │   │
+│  └──────────┴───────────┴────────────┴───────┘   │
 └──────────────────────────────────────────────────┘
 ```
 
@@ -92,7 +108,7 @@ Context Relay lets you **define a project once**, generate a structured primer, 
 | **Styling** | TailwindCSS v4 with design tokens |
 | **Routing** | React Router v7 (HashRouter) |
 | **Build Tool** | Vite 7 (multi-entry build) |
-| **Extension** | Chrome Manifest V3 |
+| **Extension** | Manifest V3 (Chrome, Edge, Firefox) |
 | **Storage** | `chrome.storage.local` (fallback to `localStorage` for dev) |
 | **Icons** | Inline SVG (no icon library dependency) |
 
@@ -108,18 +124,21 @@ src/
 │   ├── chatgpt.ts
 │   ├── claude.ts
 │   ├── gemini.ts
+│   ├── perplexity.ts
+│   ├── grok.ts
+│   ├── mistral.ts
 │   └── shared.ts       # Shared content script logic
 ├── lib/                # Utilities and data layer
-│   ├── constants.ts    # Site selectors, config
+│   ├── constants.ts    # Site selectors, config, templates
 │   ├── storage.ts      # Async storage with caching layer
-│   └── sample-data.ts  # Demo data
+│   └── sample-data.ts  # Demo data with tags
 ├── pages/              # Route pages
-│   ├── Dashboard.tsx   # Project list
-│   ├── ProjectForm.tsx # Create/edit project
-│   ├── PrimerView.tsx  # Per-project primer history
-│   └── GlobalHistory.tsx # All primers across projects
+│   ├── Dashboard.tsx   # Project list with search, tags, templates
+│   ├── ProjectForm.tsx # Create/edit project with tags
+│   ├── PrimerView.tsx  # Per-project primer with export
+│   └── GlobalHistory.tsx # All primers with search, filter, export
 ├── App.tsx             # Route definitions
-├── AppSidepanel.tsx    # Side panel entry
+├── AppSidepanel.tsx    # Side panel with search + export
 ├── main.tsx            # Popup entry
 ├── main-sidepanel.tsx  # Side panel entry
 ├── background.ts       # Service worker
@@ -131,7 +150,7 @@ src/
 
 ## Installation
 
-### Chrome Extension
+### Chrome / Edge / Firefox
 
 1. **Build the extension**
    ```bash
@@ -166,27 +185,31 @@ Open `http://localhost:5173` in your browser. The dev preview includes sample da
 
 ### Creating a Project
 1. Click the Context Relay icon in your toolbar
-2. Click **"New Project"**
-3. Fill in: project name, current task, key decisions, links, and notes
+2. Click **"New Project"** (or "Templates" to start from a template)
+3. Fill in: project name, current task, key decisions, links, notes, and tags
 4. Click **"Save"**
 
 ### Generating a Primer
 1. Open a project from the dashboard
 2. Click **"Generate Primer"**
 3. The primer is automatically formatted and saved
-4. Click **"Copy"** to copy it to your clipboard
+4. Click **"Copy"** to copy it to your clipboard, or **"Export"** to download
 
 ### Relaying to an AI Agent
-1. Go to ChatGPT, Claude, or Gemini
+1. Go to ChatGPT, Claude, Gemini, Perplexity, Grok, or Mistral
 2. Click the floating **"Relay"** button (appears in the bottom-right corner)
 3. Select a project from the list
 4. The primer is injected into the chat input — press Enter to send
 
-### Viewing History
-- Click **"History"** in the top navigation
-- See all primers across all projects, sorted by date
-- Expand any primer to read the full content
-- Click **"View"** to go to the project, or **"Copy"** to copy the primer
+### Searching & Filtering
+- Use the search bar on the Dashboard to find projects by name, task, or tag
+- Click tag buttons to filter projects by tag
+- On the History page, search primers by keyword or filter by project
+
+### Exporting Primers
+- On a project's page, click **"Export"** on any primer to download as Markdown or JSON
+- On the History page, click **"Export All"** to export all visible primers at once
+- Copy a shareable link to any individual primer
 
 ---
 
@@ -205,20 +228,14 @@ Open `http://localhost:5173` in your browser. The dev preview includes sample da
 
 1. Add a new content script in `src/content-scripts/`
 2. Register it in `manifest.json` under `content_scripts`
-3. Add the site's hostname and selectors to `src/lib/constants.ts`
-4. Implement the injection logic in the new content script
+3. Add it to `vite.config.ts` rollup inputs
+4. Add the site's hostname and selectors to `src/lib/constants.ts`
 
 ---
 
 ## Roadmap
 
 - [ ] **Cloud sync** — Supabase integration for cross-device primer access
-- [ ] **Export** — download primers as markdown, JSON, or shareable links
-- [ ] **Search / filter** — search across all primers by project or keyword
-- [ ] **Tags** — Tag-based organization and filtering
-- [ ] **Template library** — Pre-built primer templates for common workflows
-- [ ] **More AI platforms** — Perplexity, Grok, Mistral, and others
-- [ ] **Firefox/Edge** — Cross-browser support
 
 ---
 

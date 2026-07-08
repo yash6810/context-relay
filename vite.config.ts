@@ -15,6 +15,9 @@ export default defineConfig({
         "content-chatgpt": resolve(__dirname, "src/content-scripts/chatgpt.ts"),
         "content-claude": resolve(__dirname, "src/content-scripts/claude.ts"),
         "content-gemini": resolve(__dirname, "src/content-scripts/gemini.ts"),
+        "content-perplexity": resolve(__dirname, "src/content-scripts/perplexity.ts"),
+        "content-grok": resolve(__dirname, "src/content-scripts/grok.ts"),
+        "content-mistral": resolve(__dirname, "src/content-scripts/mistral.ts"),
       },
       output: {
         entryFileNames: "scripts/[name].js",

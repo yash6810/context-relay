@@ -83,6 +83,10 @@ export async function ensureSampleData(): Promise<void> {
 export async function getProjects(): Promise<Project[]> {
   if (cachedProjects) return cachedProjects;
   const projects = await readFromStorage<Project>(PROJECTS_KEY);
+  // Backward compatibility: ensure tags field exists on old data
+  for (const p of projects) {
+    if (!p.tags) (p as Project).tags = [];
+  }
   cachedProjects = projects;
   return projects;
 }

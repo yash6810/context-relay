@@ -16,6 +16,7 @@ export const SAMPLE_PROJECTS: Project[] = [
       "https://github.com/example/ecom-dashboard\nhttps://figma.com/file/ecom-dash-v2\nhttps://vercel.com/ecom-dashboard",
     additionalNotes:
       "Target launch: end of month. Need dark mode support. API rate limits from third-party analytics service are a concern.",
+    tags: ["web", "dashboard", "analytics"],
     createdAt: daysAgo(5),
     updatedAt: daysAgo(1),
   },
@@ -30,6 +31,7 @@ export const SAMPLE_PROJECTS: Project[] = [
       "https://expo.dev/projects/fitness-app\nhttps://supabase.com/project/fitness-prod\nhttps://figma.com/file/fitness-app",
     additionalNotes:
       "Beta testing starts next week. Must support offline mode for gym use. Need to integrate Apple Health and Google Fit for step data.",
+    tags: ["mobile", "react-native", "health"],
     createdAt: daysAgo(10),
     updatedAt: daysAgo(2),
   },
@@ -44,6 +46,7 @@ export const SAMPLE_PROJECTS: Project[] = [
       "https://github.com/org/blog-api\nhttps://www.notion.so/api-spec\nhttps://fastify.dev/docs",
     additionalNotes:
       "Need rate limiting (100 req/min per tenant). Image upload limit 5MB. Must support both REST and GraphQL endpoints eventually.",
+    tags: ["api", "backend", "typescript"],
     createdAt: daysAgo(14),
     updatedAt: daysAgo(3),
   },

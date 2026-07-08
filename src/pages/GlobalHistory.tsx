@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { getPrimers, getProjects } from "../lib/storage";
 import type { Primer, Project } from "../types";
@@ -38,10 +38,76 @@ function formatDate(isoDate: string): string {
   });
 }
 
+/* ── Export helpers ───────────────────────────── */
+
+function downloadFile(content: string, filename: string, mime: string) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 /* ── types ───────────────────────────────────── */
 
 interface PrimerWithProject extends Primer {
   projectName: string;
+}
+
+/* ── Export all ───────────────────────────────── */
+
+function ExportAllButton({ primers }: { primers: PrimerWithProject[] }) {
+  const [open, setOpen] = useState(false);
+
+  const handleMarkdownAll = () => {
+    let combined = "# Context Relay — All Primers\n\n";
+    primers.forEach((p) => {
+      combined += `## ${p.projectName} (${formatDate(p.createdAt)})\n\n${p.content}\n\n---\n\n`;
+    });
+    downloadFile(combined, "all-primers.md", "text/markdown");
+    setOpen(false);
+  };
+
+  const handleJSONAll = () => {
+    const data = primers.map((p) => ({
+      project: p.projectName,
+      createdAt: p.createdAt,
+      content: p.content,
+    }));
+    downloadFile(JSON.stringify(data, null, 2), "all-primers.json", "application/json");
+    setOpen(false);
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-accent text-white font-medium text-sm hover:bg-accent-hover active:scale-[0.97] transition-all duration-150 cursor-pointer focus-visible:ring-2 focus-visible:ring-accent"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" x2="12" y1="15" y2="3" />
+        </svg>
+        Export All
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-1 z-20 w-44 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
+            <button onClick={handleMarkdownAll} className="w-full text-left px-4 py-2.5 text-sm text-fg hover:bg-muted transition-colors duration-100 cursor-pointer flex items-center gap-2">
+              <span className="text-xs">📝</span> All as Markdown
+            </button>
+            <button onClick={handleJSONAll} className="w-full text-left px-4 py-2.5 text-sm text-fg hover:bg-muted transition-colors duration-100 cursor-pointer flex items-center gap-2 border-t border-border">
+              <span className="text-xs">📄</span> All as JSON
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 /* ── PrimerCard ──────────────────────────────── */
@@ -257,6 +323,8 @@ export default function GlobalHistory() {
     PrimerWithProject[]
   >([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedProject, setSelectedProject] = useState<string>("");
 
   useEffect(() => {
     async function load() {
@@ -281,6 +349,29 @@ export default function GlobalHistory() {
     }
     load();
   }, []);
+
+  // Get unique project names for filter
+  const projectNames = useMemo(() => {
+    const names = new Set(primersWithProjects.map((p) => p.projectName));
+    return Array.from(names).sort();
+  }, [primersWithProjects]);
+
+  // Filter primers
+  const filteredPrimers = useMemo(() => {
+    let list = primersWithProjects;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(
+        (p) =>
+          p.projectName.toLowerCase().includes(q) ||
+          p.content.toLowerCase().includes(q)
+      );
+    }
+    if (selectedProject) {
+      list = list.filter((p) => p.projectName === selectedProject);
+    }
+    return list;
+  }, [primersWithProjects, searchQuery, selectedProject]);
 
   if (loading) {
     return (
@@ -319,7 +410,7 @@ export default function GlobalHistory() {
       </div>
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-start justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
             Primer History
@@ -332,6 +423,61 @@ export default function GlobalHistory() {
             </p>
           )}
         </div>
+        {filteredPrimers.length > 0 && (
+          <ExportAllButton primers={filteredPrimers} />
+        )}
+      </div>
+
+      {/* Search + filter */}
+      <div className="flex items-center gap-3 mb-6">
+        <div className="relative flex-1">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-fg pointer-events-none"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
+          </svg>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search primers by keyword..."
+            className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-border bg-card text-fg placeholder:text-muted-fg text-sm focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all duration-150 box-border"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded text-muted-fg hover:text-fg transition-colors cursor-pointer"
+              aria-label="Clear search"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+        {projectNames.length > 1 && (
+          <select
+            value={selectedProject}
+            onChange={(e) => setSelectedProject(e.target.value)}
+            className="px-3 py-2.5 rounded-lg border border-border bg-card text-fg text-sm focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all duration-150 cursor-pointer"
+            aria-label="Filter by project"
+          >
+            <option value="">All projects</option>
+            {projectNames.map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Content */}
@@ -380,16 +526,31 @@ export default function GlobalHistory() {
             Go to Dashboard
           </Link>
         </div>
-      ) : (
-        <div className="space-y-5">
-          {primersWithProjects.map((primer) => (
-            <PrimerCard
-              key={primer.id}
-              primer={primer}
-              projectId={primer.projectId}
-            />
-          ))}
+      ) : filteredPrimers.length === 0 ? (
+        <div className="text-center py-16">
+          <h2 className="text-lg font-semibold mb-1">No matching primers</h2>
+          <p className="text-muted-fg text-sm">
+            Try a different search or clear your filters.
+          </p>
         </div>
+      ) : (
+        <>
+          {searchQuery && (
+            <p className="text-sm text-muted-fg mb-4">
+              {filteredPrimers.length} result{filteredPrimers.length !== 1 ? "s" : ""} for "{searchQuery}"
+              {selectedProject && <> in <strong>{selectedProject}</strong></>}
+            </p>
+          )}
+          <div className="space-y-5">
+            {filteredPrimers.map((primer) => (
+              <PrimerCard
+                key={primer.id}
+                primer={primer}
+                projectId={primer.projectId}
+              />
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

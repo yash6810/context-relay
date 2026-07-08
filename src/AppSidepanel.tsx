@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { useTheme } from "./context/ThemeContext";
 import { getProjects, getPrimers, ensureSampleData } from "./lib/storage";
 import type { Project, Primer } from "./types";
@@ -22,6 +23,29 @@ function relativeTime(isoDate: string): string {
   if (diffDays < 7) return `${diffDays}d ago`;
   if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
   return `${Math.floor(diffDays / 30)}mo ago`;
+}
+
+function formatDate(isoDate: string): string {
+  const d = new Date(isoDate);
+  return d.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/* ── Export helpers ───────────────────────────── */
+
+function downloadFile(content: string, filename: string, mime: string) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export default function AppSidepanel() {
@@ -67,9 +91,24 @@ export default function AppSidepanel() {
     }
   }, []);
 
-  const filteredProjects = projects.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  // Filter projects by search
+  const filteredProjects = useMemo(() => {
+    const q = search.toLowerCase();
+    return projects.filter((p) =>
+      p.name.toLowerCase().includes(q) ||
+      p.currentTask.toLowerCase().includes(q) ||
+      (p.tags || []).some((t) => t.toLowerCase().includes(q))
+    );
+  }, [projects, search]);
+
+  // Filter primers by search
+  const filteredPrimers = useMemo(() => {
+    if (!search.trim()) return primers;
+    const q = search.toLowerCase();
+    return primers.filter((p) =>
+      p.content.toLowerCase().includes(q)
+    );
+  }, [primers, search]);
 
   return (
     <div className="min-h-screen bg-bg text-fg transition-colors duration-200">
@@ -116,21 +155,23 @@ export default function AppSidepanel() {
 
       {/* Content */}
       <div className="p-3">
+        {/* Search bar (visible in both views) */}
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={view === "projects" ? "Search by name, task, or tag..." : "Search primers..."}
+          className="w-full px-3 py-2 rounded-lg border border-border bg-card text-fg placeholder:text-muted-fg text-sm focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all duration-150 mb-3 box-border"
+        />
+
         {view === "projects" ? (
           <>
-            {/* Search */}
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search projects..."
-              className="w-full px-3 py-2 rounded-lg border border-border bg-card text-fg placeholder:text-muted-fg text-sm focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all duration-150 mb-3 box-border"
-            />
-
             {/* Project list */}
             {filteredProjects.length === 0 ? (
               <div className="text-center py-10">
-                <p className="text-sm text-muted-fg">No projects found</p>
+                <p className="text-sm text-muted-fg">
+                  {search ? "No matching projects" : "No projects found"}
+                </p>
                 <p className="text-xs text-muted-fg mt-1">Open the popup to create one</p>
               </div>
             ) : (
@@ -145,6 +186,15 @@ export default function AppSidepanel() {
                     <div className="text-xs text-muted-fg mt-0.5 truncate">
                       {p.currentTask.slice(0, 100)}
                     </div>
+                    {p.tags && p.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {p.tags.slice(0, 3).map((tag) => (
+                          <span key={tag} className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-accent-light text-accent">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </button>
                 ))}
               </div>
@@ -153,14 +203,16 @@ export default function AppSidepanel() {
         ) : (
           <>
             {/* Primer list */}
-            {primers.length === 0 ? (
+            {filteredPrimers.length === 0 ? (
               <div className="text-center py-10">
-                <p className="text-sm text-muted-fg">No primers yet</p>
+                <p className="text-sm text-muted-fg">
+                  {search ? "No matching primers" : "No primers yet"}
+                </p>
                 <p className="text-xs text-muted-fg mt-1">Open this project in the popup to generate one</p>
               </div>
             ) : (
               <div className="space-y-2">
-                {primers.map((primer) => (
+                {filteredPrimers.map((primer) => (
                   <div key={primer.id}>
                     <button
                       onClick={() =>
@@ -199,25 +251,42 @@ export default function AppSidepanel() {
                       <div className="mt-1 ml-2 border border-border rounded-xl overflow-hidden">
                         <div className="bg-muted px-3 py-2 flex items-center justify-between">
                           <span className="text-xs text-muted-fg">Primer</span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCopy(primer);
-                            }}
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-card border border-border text-muted-fg hover:text-fg hover:border-accent transition-all duration-150 cursor-pointer"
-                          >
-                            {copiedId === primer.id ? (
-                              <>✓ Copied!</>
-                            ) : (
-                              <>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-                                  <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-                                </svg>
-                                Copy
-                              </>
-                            )}
-                          </button>
+                          <div className="flex items-center gap-1">
+                            {/* Export button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                downloadFile(primer.content, `primer-${primer.id.slice(0, 8)}.md`, "text/markdown");
+                              }}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-card border border-border text-muted-fg hover:text-fg hover:border-accent transition-all duration-150 cursor-pointer"
+                              title="Download as Markdown"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="7 10 12 15 17 10" />
+                                <line x1="12" x2="12" y1="15" y2="3" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCopy(primer);
+                              }}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-card border border-border text-muted-fg hover:text-fg hover:border-accent transition-all duration-150 cursor-pointer"
+                            >
+                              {copiedId === primer.id ? (
+                                <>✓ Copied!</>
+                              ) : (
+                                <>
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                                  </svg>
+                                  Copy
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </div>
                         <pre className="p-3 text-xs font-mono whitespace-pre-wrap overflow-x-auto text-fg">
                           {primer.content}

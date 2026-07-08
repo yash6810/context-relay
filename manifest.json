@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Context Relay",
-  "version": "1.0.0",
-  "description": "Relay context between AI agents without loss. Save project context, generate primers, and inject them into ChatGPT, Claude, and Gemini.",
+  "version": "1.1.0",
+  "description": "Relay context between AI agents without loss. Save project context, generate primers, and inject them into ChatGPT, Claude, Gemini, Perplexity, Grok, and Mistral.",
   "permissions": [
     "storage",
     "sidePanel",
@@ -11,7 +11,10 @@
   "host_permissions": [
     "https://chatgpt.com/*",
     "https://claude.ai/*",
-    "https://gemini.google.com/*"
+    "https://gemini.google.com/*",
+    "https://perplexity.ai/*",
+    "https://grok.com/*",
+    "https://chat.mistral.ai/*"
   ],
   "background": {
     "service_worker": "scripts/background.js",
@@ -44,11 +47,35 @@
       "matches": ["https://gemini.google.com/*"],
       "js": ["scripts/content-gemini.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://perplexity.ai/*"],
+      "js": ["scripts/content-perplexity.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://grok.com/*"],
+      "js": ["scripts/content-grok.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://chat.mistral.ai/*"],
+      "js": ["scripts/content-mistral.js"],
+      "run_at": "document_idle"
     }
   ],
   "icons": {
     "16": "icons/icon16.svg",
     "48": "icons/icon48.svg",
     "128": "icons/icon128.svg"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "context-relay@nativelyai.app",
+      "strict_min_version": "109.0"
+    },
+    "edge": {
+      "browser_action_next_to_addressbar": true
+    }
   }
 }

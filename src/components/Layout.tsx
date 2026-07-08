@@ -21,6 +21,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {/* Nav */}
           <nav className="flex items-center gap-4">
             <Link
+              to="/"
+              className={`text-sm font-medium transition-colors duration-150 ${
+                location.pathname === "/" ? "text-accent" : "text-muted-fg hover:text-fg"
+              }`}
+            >
+              Projects
+            </Link>
+            <Link
               to="/history"
               className={`text-sm font-medium transition-colors duration-150 ${
                 location.pathname === "/history"

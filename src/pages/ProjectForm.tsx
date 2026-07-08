@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { getProject, saveProject } from "../lib/storage";
+import type { ProjectTemplate } from "../types";
 
 function generateId(): string {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -12,6 +13,7 @@ function generateId(): string {
 export default function ProjectForm() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const isEdit = Boolean(id);
 
   const [name, setName] = useState("");
@@ -19,11 +21,25 @@ export default function ProjectForm() {
   const [keyDecisions, setKeyDecisions] = useState("");
   const [relevantLinks, setRelevantLinks] = useState("");
   const [additionalNotes, setAdditionalNotes] = useState("");
+  const [tagsStr, setTagsStr] = useState("");
   const [errors, setErrors] = useState<{ name?: string; currentTask?: string }>({});
   const [loading, setLoading] = useState(isEdit);
 
-  // Load existing project data for edit mode
+  // Load template from navigation state or existing project
   useEffect(() => {
+    const template = (location.state as { template?: ProjectTemplate })?.template;
+
+    if (template) {
+      setName(template.name.replace(/\[.*?\]/g, "").trim() || "");
+      setCurrentTask(template.currentTask);
+      setKeyDecisions(template.keyDecisions);
+      setRelevantLinks(template.relevantLinks);
+      setAdditionalNotes(template.additionalNotes);
+      setTagsStr(template.tags.join(", "));
+      setLoading(false);
+      return;
+    }
+
     if (!id) return;
     getProject(id).then((project) => {
       if (!project) {
@@ -35,9 +51,10 @@ export default function ProjectForm() {
       setKeyDecisions(project.keyDecisions || "");
       setRelevantLinks(project.relevantLinks || "");
       setAdditionalNotes(project.additionalNotes || "");
+      setTagsStr((project.tags || []).join(", "));
       setLoading(false);
     });
-  }, [id, navigate]);
+  }, [id, navigate, location.state]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +67,10 @@ export default function ProjectForm() {
     if (Object.keys(newErrors).length > 0) return;
 
     const now = new Date().toISOString();
+    const tags = tagsStr
+      .split(/[,\n]+/)
+      .map((t) => t.trim().toLowerCase())
+      .filter(Boolean);
 
     if (isEdit && id) {
       const existing = await getProject(id);
@@ -64,6 +85,7 @@ export default function ProjectForm() {
         keyDecisions: keyDecisions.trim(),
         relevantLinks: relevantLinks.trim(),
         additionalNotes: additionalNotes.trim(),
+        tags,
         updatedAt: now,
       });
       navigate(`/projects/${id}`);
@@ -76,6 +98,7 @@ export default function ProjectForm() {
         keyDecisions: keyDecisions.trim(),
         relevantLinks: relevantLinks.trim(),
         additionalNotes: additionalNotes.trim(),
+        tags,
         createdAt: now,
         updatedAt: now,
       });
@@ -150,6 +173,24 @@ export default function ProjectForm() {
               {errors.currentTask}
             </p>
           )}
+        </div>
+
+        {/* Tags */}
+        <div>
+          <label htmlFor="tags" className="block text-sm font-medium mb-1.5">
+            Tags
+          </label>
+          <input
+            id="tags"
+            type="text"
+            value={tagsStr}
+            onChange={(e) => setTagsStr(e.target.value)}
+            placeholder="e.g. web, backend, react (comma-separated)"
+            className="w-full px-4 py-2.5 rounded-lg border border-border bg-card text-fg placeholder:text-muted-fg focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all duration-150"
+          />
+          <p className="text-xs text-muted-fg mt-1">
+            Comma-separated tags for filtering and organization
+          </p>
         </div>
 
         {/* Key Decisions */}
