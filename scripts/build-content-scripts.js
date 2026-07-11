@@ -1,5 +1,4 @@
 import { build } from "esbuild";
-import { readdirSync } from "fs";
 
 const contentScriptsDir = "src/content-scripts";
 const platforms = ["chatgpt", "claude", "gemini", "perplexity", "grok", "mistral"];

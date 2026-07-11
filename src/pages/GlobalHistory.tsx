@@ -98,10 +98,23 @@ function ExportAllButton({ primers }: { primers: PrimerWithProject[] }) {
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div className="absolute right-0 top-full mt-1 z-20 w-44 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
             <button onClick={handleMarkdownAll} className="w-full text-left px-4 py-2.5 text-sm text-fg hover:bg-muted transition-colors duration-100 cursor-pointer flex items-center gap-2">
-              <span className="text-xs">📝</span> All as Markdown
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-muted-fg">
+                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" x2="8" y1="13" y2="13" />
+                <line x1="16" x2="8" y1="17" y2="17" />
+                <line x1="10" x2="8" y1="9" y2="9" />
+              </svg>
+              All as Markdown
             </button>
             <button onClick={handleJSONAll} className="w-full text-left px-4 py-2.5 text-sm text-fg hover:bg-muted transition-colors duration-100 cursor-pointer flex items-center gap-2 border-t border-border">
-              <span className="text-xs">📄</span> All as JSON
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-muted-fg">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+              All as JSON
             </button>
           </div>
         </>
