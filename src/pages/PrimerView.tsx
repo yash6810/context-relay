@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, type ReactNode } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { getProject, savePrimer, getPrimers, deleteProject } from "../lib/storage";
 import { supabase } from "../lib/supabase";
@@ -771,8 +771,8 @@ function Section({
   children,
 }: {
   title: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
+  icon: ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div className="bg-card border border-border rounded-xl p-4 sm:p-5">

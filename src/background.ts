@@ -147,8 +147,8 @@ async function generatePrimer(text: string, project: Project): Promise<string> {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        transcript: text,
-        context: project.currentTask,
+        project_name: project.name || "Captured Conversation",
+        current_task: text,
         key_decisions: project.keyDecisions || "",
         relevant_links: project.relevantLinks || "",
         additional_notes: project.additionalNotes || "",

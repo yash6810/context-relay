@@ -1,8 +1,9 @@
 import { Link, useLocation } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
+import type { ReactNode } from "react";
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+export default function Layout({ children }: { children: ReactNode }) {
   const { theme, toggleTheme } = useTheme();
   const { user, syncing, signOut } = useAuth();
   const location = useLocation();

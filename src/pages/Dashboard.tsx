@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getProjects, getPrimers } from "../lib/storage";
+import { getProjects } from "../lib/storage";
 import { TEMPLATES } from "../lib/constants";
-import type { Project, Primer, ProjectTemplate } from "../types";
+import type { Project, ProjectTemplate } from "../types";
 
 function relativeTime(isoDate: string): string {
   const now = Date.now();
