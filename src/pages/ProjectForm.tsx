@@ -12,7 +12,7 @@ function generateId(): string {
 
 export default function ProjectForm() {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams();
   const location = useLocation();
   const isEdit = Boolean(id);
 

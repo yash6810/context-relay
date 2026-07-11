@@ -261,7 +261,7 @@ function PrimerBlock({ primer, projectName }: { primer: Primer; projectName: str
 /* ── Page ──────────────────────────────────────── */
 
 export default function PrimerView() {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams();
   const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
   const [notFound, setNotFound] = useState(false);
