@@ -37,6 +37,10 @@ Context Relay is a browser extension that eliminates the friction of switching b
 
 ### Primer Generation
 - Generate structured, formatted primers from your project data
+- **Hybrid routing pipeline** — each generation passes through a lightweight local pre-check before deciding on the processing path:
+  - **Local (green badge):** If the AI backend is unreachable or the context is short/unchanged, the primer is formatted entirely on-device via markdown compression
+  - **Cloud (indigo badge):** For longer or substantially changed context, the project data is sent to Fireworks AI's Gemma 3 27B model for intelligent summarization; previous primer content is included as additional context
+- Every primer records its routing origin (`local` or `cloud`) and model used, visible as an inline badge on history cards
 - Automatic version history with timestamps
 - Expandable cards for reading full primers
 - One-click copy to clipboard
@@ -232,15 +236,6 @@ Open `http://localhost:5173` — sample data is loaded automatically for testing
 - ESLint configured via `eslint.config.js`
 - `noUnusedLocals` and `noUnusedParameters` enforced
 - TailwindCSS design tokens for consistent styling
-
----
-
-## Roadmap
-
-- [ ] **Cloud sync** — Supabase integration for cross-device primer access and team collaboration
-- [ ] **AI-powered primer enhancement** — Smart rephrasing and summarization
-- [ ] **Custom relay templates** — User-defined formatting presets
-- [ ] **Firefox Manifest V3 support** — Full Firefox compatibility
 
 ---
 
