@@ -21,6 +21,7 @@ export default defineConfig({
         "content-mistral": resolve(__dirname, "src/content-scripts/mistral.ts"),
       },
       output: {
+        format: "iife",
         entryFileNames: "scripts/[name].js",
         chunkFileNames: "scripts/chunks/[name]-[hash].js",
         assetFileNames: "assets/[name]-[hash][extname]",

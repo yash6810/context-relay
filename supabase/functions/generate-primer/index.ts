@@ -8,7 +8,7 @@ const MAX_FIELD_LENGTH = 5_000; // max characters per text field
 const FIREWORKS_MAX_TOKENS = 500; // max output tokens per Fireworks call
 
 const FIREWORKS_URL = "https://api.fireworks.ai/inference/v1/chat/completions";
-const MODEL = "accounts/fireworks/models/gemma-3-27b-it";
+const MODEL = "accounts/fireworks/models/gpt-oss-120b";
 
 const SYSTEM_PROMPT = `You are a context-compression assistant. Your job is to take raw project details provided by the user and rewrite them into a clean, structured 'primer' — a concise document that gives another AI chat assistant full project context in one go.
 
@@ -137,7 +137,7 @@ Deno.serve(async (req: Request) => {
           const data = await resp.json();
           primer = data.choices[0].message.content.trim();
           routing = "cloud";
-          model_used = "gemma-3-27b-it";
+          model_used = "gpt-oss-120b";
         } catch (_err) {
           // Fallback to plain-text formatting
           primer = buildFallback(
