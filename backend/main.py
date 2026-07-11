@@ -76,10 +76,13 @@ class GeneratePrimerRequest(BaseModel):
     key_decisions: str = Field(default="", max_length=MAX_FIELD_LENGTH, description="Key decisions made so far")
     relevant_links: str = Field(default="", max_length=MAX_FIELD_LENGTH, description="Relevant links or references")
     additional_notes: str = Field(default="", max_length=MAX_FIELD_LENGTH, description="Any additional notes or context")
+    last_primer_content: str = Field(default="", max_length=MAX_FIELD_LENGTH, description="Previously generated primer content for diff-based local classification")
 
 
 class GeneratePrimerResponse(BaseModel):
     primer: str
+    routing: str  # "local" | "cloud"
+    model_used: str  # classifier name or model name
 
 
 class HealthResponse(BaseModel):
@@ -149,6 +152,104 @@ PRIMER_SYSTEM_PROMPT = (
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+LOCAL_CLASSIFIER_NAME = "context-relay-classifier-v1"
+LOCAL_WORD_LIMIT = 150  # total words below this → local routing
+LOCAL_SIMILARITY_THRESHOLD = 0.85  # Jaccard overlap above this → unchanged → local routing
+
+
+def _word_count(text: str) -> int:
+    """Count words in a string, handling empty/whitespace."""
+    return len(text.split()) if text.strip() else 0
+
+
+def _jaccard_similarity(a: str, b: str) -> float:
+    """Simple word-set Jaccard similarity between two strings."""
+    words_a = set(a.lower().split())
+    words_b = set(b.lower().split())
+    if not words_a and not words_b:
+        return 1.0
+    intersection = words_a & words_b
+    union = words_a | words_b
+    return len(intersection) / len(union)
+
+
+def _build_lightweight_primer(req: GeneratePrimerRequest) -> str:
+    """Quickly format a concise primer without calling any AI."""
+    lines = []
+    if req.project_name:
+        lines.append(f"**{req.project_name}**")
+    lines.append("")
+    if req.current_task:
+        lines.append("**Current Task:**")
+        lines.append(req.current_task)
+        lines.append("")
+    if req.key_decisions:
+        lines.append("**Key Decisions:**")
+        for line in req.key_decisions.split("\n"):
+            stripped = line.strip()
+            if stripped:
+                lines.append(f"• {stripped}")
+        lines.append("")
+    if req.relevant_links:
+        lines.append("**Relevant Links:**")
+        for line in req.relevant_links.split("\n"):
+            stripped = line.strip()
+            if stripped:
+                lines.append(f"• {stripped}")
+        lines.append("")
+    if req.additional_notes:
+        lines.append("**Additional Notes:**")
+        lines.append(req.additional_notes)
+        lines.append("")
+    return "\n".join(lines).strip()
+
+
+def _classify_context_locally(req: GeneratePrimerRequest) -> dict:
+    """
+    Rule-based local classifier.
+    Returns {"routing": "local", "primer": str} if the context is
+    lightweight or unchanged, or {"routing": "cloud", "primer": None}
+    if it should go to the AI model.
+    """
+    # Combine all context fields and count words
+    context_parts = [
+        req.project_name,
+        req.current_task,
+        req.key_decisions,
+        req.relevant_links,
+        req.additional_notes,
+    ]
+    combined = " ".join(p for p in context_parts if p.strip())
+    total_words = _word_count(combined)
+
+    # If context is very short → local lightweight formatting
+    if total_words < LOCAL_WORD_LIMIT:
+        primer = _build_lightweight_primer(req)
+        logger.info(
+            "CLASSIFY  routing=local reason=under_word_limit(%d<%d)",
+            total_words, LOCAL_WORD_LIMIT,
+        )
+        return {"routing": "local", "primer": primer}
+
+    # If we have a previous primer, check whether context has changed meaningfully
+    if req.last_primer_content:
+        similarity = _jaccard_similarity(combined, req.last_primer_content)
+        if similarity > LOCAL_SIMILARITY_THRESHOLD:
+            # Context hasn't changed much → reuse the previous primer
+            logger.info(
+                "CLASSIFY  routing=local reason=unchanged_context(sim=%.3f)",
+                similarity,
+            )
+            return {"routing": "local", "primer": req.last_primer_content}
+
+    # Context is substantial and has changed → route to cloud
+    logger.info(
+        "CLASSIFY  routing=cloud reason=heavy_context(%d>=%d)",
+        total_words, LOCAL_WORD_LIMIT,
+    )
+    return {"routing": "cloud", "primer": None}
 
 
 def _build_fallback_prompt(req: GeneratePrimerRequest) -> str:
@@ -233,18 +334,33 @@ async def generate_primer(req: GeneratePrimerRequest, request: Request):
 
     # 2. Log incoming request (no PII — just IP, fields presence, and outcome)
     fields_present = sum(1 for v in [req.project_name, req.current_task, req.key_decisions, req.relevant_links, req.additional_notes] if v)
+    logger.info("HIT  source=%s fields=%d", ip, fields_present)
 
-    # 3. Try Fireworks AI first
+    # 3. Run local classifier — decides whether to handle locally or route to cloud AI
+    classification = _classify_context_locally(req)
+
+    if classification["routing"] == "local":
+        return GeneratePrimerResponse(
+            primer=classification["primer"],
+            routing="local",
+            model_used=LOCAL_CLASSIFIER_NAME,
+        )
+
+    # 4. Route to cloud AI (Fireworks)
     primer = await _call_fireworks(req)
 
-    # 4. Fallback to plain-text formatting
+    # 5. Fallback to plain-text formatting if the AI call fails
     if primer is None:
         primer = _build_fallback_prompt(req)
         logger.info("HIT  source=%s fields=%d outcome=fallback", ip, fields_present)
     else:
         logger.info("HIT  source=%s fields=%d outcome=ai", ip, fields_present)
 
-    return GeneratePrimerResponse(primer=primer)
+    return GeneratePrimerResponse(
+        primer=primer,
+        routing="cloud",
+        model_used=FIREWORKS_MODEL,
+    )
 
 
 # ---------------------------------------------------------------------------

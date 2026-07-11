@@ -92,6 +92,8 @@ export async function syncPrimerToCloud(
       user_id: userId,
       project_id: primer.projectId,
       content: primer.content,
+      routing: primer.routing ?? null,
+      model_used: primer.modelUsed ?? null,
       created_at: primer.createdAt,
     },
     { onConflict: "user_id, id" }
@@ -117,6 +119,8 @@ export async function pullPrimersFromCloud(
     id: row.id,
     projectId: row.project_id,
     content: row.content,
+    routing: row.routing ?? undefined,
+    modelUsed: row.model_used ?? undefined,
     createdAt: row.created_at,
   }));
 }

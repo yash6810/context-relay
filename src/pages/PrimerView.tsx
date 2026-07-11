@@ -166,6 +166,35 @@ function ExportMenu({ content, projectName, primerId, createdAt }: { content: st
   );
 }
 
+/* ── RoutingBadge ──────────────────────────────── */
+
+function RoutingBadge({ routing, modelUsed }: { routing?: string; modelUsed?: string }) {
+  if (!routing) return null;
+  const isLocal = routing === "local";
+  return (
+    <span
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${
+        isLocal
+          ? "bg-green-500/10 text-green-600 dark:text-green-400"
+          : "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+      }`}
+      title={modelUsed ? `Model: ${modelUsed}` : "Routing preference"}
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        {isLocal ? (
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+        ) : (
+          <>
+            <path d="M12 2a8 8 0 0 0-8 8c0 1.5.5 3 1.5 4.5C7 16.5 11 20 12 22c1-2 5-5.5 6.5-7.5C19.5 13 20 11.5 20 10a8 8 0 0 0-8-8z" />
+            <circle cx="12" cy="10" r="3" />
+          </>
+        )}
+      </svg>
+      {isLocal ? "Local" : "AI"}
+    </span>
+  );
+}
+
 /* ── PrimerBlock ───────────────────────────────── */
 
 function PrimerBlock({ primer, projectName }: { primer: Primer; projectName: string }) {
@@ -197,6 +226,7 @@ function PrimerBlock({ primer, projectName }: { primer: Primer; projectName: str
           {relativeTime(primer.createdAt)}
         </span>
         <div className="flex items-center gap-2">
+          <RoutingBadge routing={primer.routing} modelUsed={primer.modelUsed} />
           <ExportMenu content={primer.content} projectName={projectName} primerId={primer.id} createdAt={primer.createdAt} />
           <button
             onClick={handleCopy}
@@ -238,6 +268,8 @@ export default function PrimerView() {
   const [loading, setLoading] = useState(true);
   const [showPrimer, setShowPrimer] = useState(false);
   const [currentPrimerContent, setCurrentPrimerContent] = useState<string>("");
+  const [currentPrimerRouting, setCurrentPrimerRouting] = useState<string | undefined>(undefined);
+  const [currentPrimerModel, setCurrentPrimerModel] = useState<string | undefined>(undefined);
   const [copied, setCopied] = useState(false);
   const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
   const [primers, setPrimers] = useState<Primer[]>([]);
@@ -285,6 +317,9 @@ export default function PrimerView() {
     setGenerationError(null);
 
     try {
+      // Get the last primer content for the Edge Function to use as context
+      const lastPrimerContent = primers[0]?.content;
+
       // Get the Supabase session for auth
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
@@ -301,6 +336,7 @@ export default function PrimerView() {
           key_decisions: project.keyDecisions,
           relevant_links: project.relevantLinks,
           additional_notes: project.additionalNotes,
+          last_primer_content: lastPrimerContent,
         }),
       });
 
@@ -312,6 +348,8 @@ export default function PrimerView() {
       const content = data.primer || formatPrimer(project);
 
       setCurrentPrimerContent(content);
+      setCurrentPrimerRouting(data.routing || undefined);
+      setCurrentPrimerModel(data.modelUsed || undefined);
       setShowPrimer(true);
 
       // Save to history
@@ -321,6 +359,8 @@ export default function PrimerView() {
         projectId: project.id,
         content,
         createdAt: now,
+        routing: data.routing || undefined,
+        modelUsed: data.modelUsed || undefined,
       };
       if (id) {
         await savePrimer(newPrimer);
@@ -339,6 +379,8 @@ export default function PrimerView() {
       // Fallback to local formatting
       const content = formatPrimer(project);
       setCurrentPrimerContent(content);
+      setCurrentPrimerRouting("local");
+      setCurrentPrimerModel(undefined);
       setShowPrimer(true);
       setGenerationError("AI generation unavailable. Using local formatting.");
 
@@ -349,6 +391,7 @@ export default function PrimerView() {
         projectId: project.id,
         content,
         createdAt: now,
+        routing: "local",
       };
       if (id) {
         await savePrimer(newPrimer);
@@ -616,7 +659,7 @@ export default function PrimerView() {
         {showPrimer && currentPrimerContent && (
           <div className="mt-6 space-y-3 animate-slide-in-top">
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <p className="text-sm font-medium text-muted-fg">Generated Primer</p>
+              <p className="text-sm font-medium text-muted-fg">Generated Primer <RoutingBadge routing={currentPrimerRouting} modelUsed={currentPrimerModel} /></p>
               <div className="flex items-center gap-2">
                 <ExportMenu content={currentPrimerContent} projectName={project.name} primerId={"current"} createdAt={new Date().toISOString()} />
                 <button
@@ -686,6 +729,7 @@ export default function PrimerView() {
                     <span className="text-sm text-muted-fg whitespace-nowrap">
                       {relativeTime(primer.createdAt)}
                     </span>
+                    <RoutingBadge routing={primer.routing} modelUsed={primer.modelUsed} />
                     <span className="text-sm text-muted-fg truncate hidden sm:inline">
                       {primer.content.slice(0, 80).replace(/\n/g, " ")}…
                     </span>

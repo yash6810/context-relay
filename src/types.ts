@@ -15,6 +15,8 @@ export interface Primer {
   projectId: string;
   content: string; // the generated primer text
   createdAt: string; // ISO date
+  routing?: "local" | "cloud"; // which path was taken during generation
+  modelUsed?: string; // the model/classifier used
 }
 
 export interface ProjectTemplate {
