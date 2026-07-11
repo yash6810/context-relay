@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { Link } from "react-router-dom";
 import { useTheme } from "./context/ThemeContext";
 import { getProjects, getPrimers, ensureSampleData } from "./lib/storage";
 import type { Project, Primer } from "./types";
@@ -23,17 +22,6 @@ function relativeTime(isoDate: string): string {
   if (diffDays < 7) return `${diffDays}d ago`;
   if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
   return `${Math.floor(diffDays / 30)}mo ago`;
-}
-
-function formatDate(isoDate: string): string {
-  const d = new Date(isoDate);
-  return d.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 /* ── Export helpers ───────────────────────────── */

@@ -349,7 +349,7 @@ export default function PrimerView() {
 
       setCurrentPrimerContent(content);
       setCurrentPrimerRouting(data.routing || undefined);
-      setCurrentPrimerModel(data.modelUsed || undefined);
+      setCurrentPrimerModel(data.model_used || undefined);
       setShowPrimer(true);
 
       // Save to history
@@ -360,7 +360,7 @@ export default function PrimerView() {
         content,
         createdAt: now,
         routing: data.routing || undefined,
-        modelUsed: data.modelUsed || undefined,
+        modelUsed: data.model_used || undefined,
       };
       if (id) {
         await savePrimer(newPrimer);

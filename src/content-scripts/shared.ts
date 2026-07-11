@@ -5,6 +5,23 @@ interface RelayMessage {
   payload?: unknown;
 }
 
+const AI_PLATFORMS = [
+  { id: "chatgpt", label: "ChatGPT", hostname: "chatgpt.com", url: "https://chatgpt.com" },
+  { id: "claude", label: "Claude", hostname: "claude.ai", url: "https://claude.ai" },
+  { id: "gemini", label: "Gemini", hostname: "gemini.google.com", url: "https://gemini.google.com" },
+  { id: "perplexity", label: "Perplexity", hostname: "perplexity.ai", url: "https://perplexity.ai" },
+  { id: "grok", label: "Grok", hostname: "grok.com", url: "https://grok.com" },
+  { id: "mistral", label: "Mistral", hostname: "chat.mistral.ai", url: "https://chat.mistral.ai" },
+];
+
+function getCurrentPlatform(): string | null {
+  const host = window.location.hostname;
+  for (const p of AI_PLATFORMS) {
+    if (host === p.hostname || host.endsWith("." + p.hostname)) return p.id;
+  }
+  return null;
+}
+
 async function sendMessage<T>(msg: RelayMessage): Promise<T> {
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage(msg, (response) => {
@@ -216,6 +233,166 @@ function createStyles(): HTMLStyleElement {
       margin-top: 4px;
       font-weight: 500;
     }
+
+    /* --- Capture button --- */
+    .cr-capture-btn {
+      all: unset;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: calc(100% - 32px);
+      margin: 10px 16px 4px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      box-sizing: border-box;
+      font-family: inherit;
+    }
+    .cr-capture-btn:hover {
+      transform: scale(1.02);
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+    }
+    .cr-capture-btn:active {
+      transform: scale(0.98);
+    }
+    .cr-capture-btn svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+    .cr-capture-btn.loading {
+      opacity: 0.7;
+      pointer-events: none;
+    }
+    .cr-capture-divider {
+      height: 1px;
+      background: #e5e7eb;
+      margin: 6px 16px 0;
+    }
+
+    /* --- Capture View --- */
+    .cr-capture-success {
+      text-align: center;
+      padding: 16px 16px 8px;
+    }
+    .cr-capture-success-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #d1fae5;
+      color: #059669;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 8px;
+      font-size: 20px;
+    }
+    .cr-capture-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1a1a2e;
+      margin-bottom: 2px;
+    }
+    .cr-capture-subtitle {
+      font-size: 12px;
+      color: #6b7280;
+      margin-bottom: 12px;
+    }
+    .cr-platform-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      padding: 0 16px 12px;
+    }
+    .cr-platform-btn {
+      all: unset;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 12px 6px;
+      border-radius: 10px;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: inherit;
+    }
+    .cr-platform-btn:hover:not(:disabled) {
+      background: #eef2ff;
+      border-color: #4f46e5;
+      transform: translateY(-1px);
+    }
+    .cr-platform-btn:active:not(:disabled) {
+      transform: scale(0.97);
+    }
+    .cr-platform-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .cr-platform-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .cr-platform-label {
+      font-size: 10px;
+      color: #374151;
+      font-weight: 500;
+    }
+    .cr-save-hint {
+      text-align: center;
+      font-size: 11px;
+      color: #9ca3af;
+      padding: 0 16px 12px;
+    }
+    .cr-capture-error {
+      text-align: center;
+      padding: 24px 16px;
+      color: #ef4444;
+      font-size: 13px;
+    }
+    .cr-capture-loading {
+      text-align: center;
+      padding: 24px 16px;
+      color: #6b7280;
+      font-size: 13px;
+    }
+    .cr-toast {
+      position: fixed;
+      bottom: 84px;
+      right: 24px;
+      z-index: 2147483647;
+      background: #065f46;
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      animation: cr-fade-in 0.2s ease, cr-fade-out 0.3s ease 2s forwards;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    @keyframes cr-fade-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes cr-fade-out {
+      to { opacity: 0; transform: translateY(8px); }
+    }
   `;
   return style;
 }
@@ -248,20 +425,52 @@ const RELAY_ICON_ALT = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 
 const BACK_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>`;
 const CLOSE_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`;
 const COPY_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
+const CAPTURE_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`;
+const CHECK_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+
+function platformColor(platformId: string): string {
+  const colors: Record<string, string> = {
+    chatgpt: "#10a37f",
+    claude: "#d97757",
+    gemini: "#4285f4",
+    perplexity: "#6366f1",
+    grok: "#1a1a2e",
+    mistral: "#f59e0b",
+  };
+  return colors[platformId] || "#6b7280";
+}
+
+function platformAbbr(platformId: string): string {
+  const abbrs: Record<string, string> = {
+    chatgpt: "GPT",
+    claude: "CLD",
+    gemini: "GMN",
+    perplexity: "PRP",
+    grok: "GRK",
+    mistral: "MST",
+  };
+  return abbrs[platformId] || "?";
+}
 
 // --- State ---
 
-let currentView: "projects" | "primers" = "projects";
+let currentView: "projects" | "primers" | "capture" = "projects";
 let selectedProject: Project | null = null;
 let projects: Project[] = [];
 let primers: Primer[] = [];
+let capturedText = "";
+let capturedPrimer: string | null = null;
+let capturedProjectId: string | null = null;
+let captureCallback: (() => string) | null = null;
 
 // --- Main injection ---
 
-function injectRelayButton(inputSelectors: string[]) {
+function injectRelayButton(inputSelectors: string[], captureFn?: () => string) {
   const container = createContainer();
   const style = createStyles();
   document.head.appendChild(style);
+
+  captureCallback = captureFn || null;
 
   // Floating button
   const btn = document.createElement("button");
@@ -292,6 +501,21 @@ function injectRelayButton(inputSelectors: string[]) {
     const target = e.target as Node;
     if (!container.contains(target) && !btn.contains(target)) {
       panel.classList.remove("open");
+    }
+  });
+
+  // Listen for injection from background (cross-tab migration)
+  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+    if (msg.type === "INJECT_PRIMER") {
+      const text = (msg.payload as { text: string })?.text || "";
+      if (text) {
+        injectIntoChat(text);
+        showToast("Injected into " + (getCurrentPlatform() || "chat") + " ✓");
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ error: "No primer text provided" });
+      }
+      return true;
     }
   });
 }
@@ -325,6 +549,9 @@ function renderProjectsView() {
   const panel = document.querySelector(".cr-panel") as HTMLElement;
   if (!panel) return;
 
+  const currentPlatform = getCurrentPlatform();
+  const platformLabel = AI_PLATFORMS.find(p => p.id === currentPlatform)?.label || "this platform";
+
   let html = `
     <div class="cr-panel-header">
       <span class="cr-panel-title">
@@ -333,6 +560,17 @@ function renderProjectsView() {
       </span>
       <button class="cr-close-btn" id="cr-close-panel">${CLOSE_ICON}</button>
     </div>
+  `;
+
+  // Capture button
+  html += `
+    <button class="cr-capture-btn" id="cr-capture-btn">
+      ${CAPTURE_ICON} Capture this conversation
+    </button>
+    <div class="cr-capture-divider"></div>
+  `;
+
+  html += `
     <div class="cr-search">
       <input class="cr-search-input" id="cr-search" placeholder="Search projects..." autocomplete="off" />
     </div>
@@ -340,7 +578,7 @@ function renderProjectsView() {
   `;
 
   if (projects.length === 0) {
-    html += `<div class="cr-list-empty">No projects yet. Open the extension to create one.</div>`;
+    html += `<div class="cr-list-empty">No projects yet. Click "Capture this conversation" to save context from ${platformLabel}, or open the extension to create a project manually.</div>`;
   } else {
     for (const p of projects) {
       html += `
@@ -359,6 +597,9 @@ function renderProjectsView() {
   document.getElementById("cr-close-panel")?.addEventListener("click", () => {
     panel.classList.remove("open");
   });
+
+  // Capture button
+  document.getElementById("cr-capture-btn")?.addEventListener("click", handleCapture);
 
   // Search
   document.getElementById("cr-search")?.addEventListener("input", (e) => {
@@ -379,6 +620,197 @@ function renderProjectsView() {
       selectedProject = proj;
       await loadPrimers(id);
       renderPrimersView();
+    });
+  });
+}
+
+async function handleCapture() {
+  const currentPlatform = getCurrentPlatform();
+  const platformLabel = AI_PLATFORMS.find(p => p.id === currentPlatform)?.label || "this platform";
+
+  // Try to capture via the provided callback
+  let text = "";
+  if (captureCallback) {
+    text = captureCallback();
+  }
+
+  if (!text || text.trim().length < 10) {
+    // Show error
+    renderCaptureError("No conversation to capture. Start a conversation with " + platformLabel + " first.");
+    return;
+  }
+
+  // Show loading state
+  renderCaptureLoading();
+
+  try {
+    // Create project from captured text
+    const projectId = `p-${Date.now()}`;
+    const now = new Date().toISOString();
+    const dateStr = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+    const project: Project = {
+      id: projectId,
+      name: `Conversation — ${platformLabel} — ${dateStr}`,
+      currentTask: text.slice(0, 150) + (text.length > 150 ? "..." : ""),
+      keyDecisions: "",
+      relevantLinks: "",
+      additionalNotes: "",
+      tags: ["captured", currentPlatform || ""],
+      createdAt: now,
+      updatedAt: now,
+      icon: "💬",
+    };
+
+    // Save project
+    await sendMessage({ type: "SAVE_PROJECT", payload: { project } });
+
+    // Generate primer from captured text
+    let primerContent = "";
+    try {
+      const response = await sendMessage<{ primer?: string; error?: string }>({
+        type: "GENERATE_PRIMER",
+        payload: { text, project },
+      });
+      primerContent = response.primer || formatPrimerText(text);
+    } catch {
+      primerContent = formatPrimerText(text);
+    }
+
+    // Save primer
+    const primer: Primer = {
+      id: `pr-${Date.now()}`,
+      projectId,
+      content: primerContent,
+      createdAt: now,
+    };
+    await sendMessage({ type: "SAVE_PRIMER", payload: { primer } });
+
+    // Store for capture view
+    capturedText = text;
+    capturedPrimer = primerContent;
+    capturedProjectId = projectId;
+
+    // Reload projects then show capture view
+    await loadProjects();
+    renderCaptureSuccess(platformLabel);
+  } catch (err) {
+    renderCaptureError("Could not save the captured conversation. Please try again.");
+  }
+}
+
+function renderCaptureLoading() {
+  currentView = "capture";
+  const panel = document.querySelector(".cr-panel") as HTMLElement;
+  if (!panel) return;
+
+  panel.innerHTML = `
+    <div class="cr-panel-header">
+      <button class="cr-back-btn" id="cr-back-capture">${BACK_ICON} Back</button>
+      <span class="cr-panel-title" style="font-size:13px;">Capturing...</span>
+      <button class="cr-close-btn" id="cr-close-panel">${CLOSE_ICON}</button>
+    </div>
+    <div class="cr-capture-loading">Reading conversation...</div>
+  `;
+
+  document.getElementById("cr-back-capture")?.addEventListener("click", () => renderProjectsView());
+  document.getElementById("cr-close-panel")?.addEventListener("click", () => {
+    panel.classList.remove("open");
+  });
+}
+
+function renderCaptureError(message: string) {
+  currentView = "capture";
+  const panel = document.querySelector(".cr-panel") as HTMLElement;
+  if (!panel) return;
+
+  panel.innerHTML = `
+    <div class="cr-panel-header">
+      <button class="cr-back-btn" id="cr-back-capture">${BACK_ICON} Back</button>
+      <span class="cr-panel-title" style="font-size:13px;">Capture</span>
+      <button class="cr-close-btn" id="cr-close-panel">${CLOSE_ICON}</button>
+    </div>
+    <div class="cr-capture-error">${escapeHtml(message)}</div>
+  `;
+
+  document.getElementById("cr-back-capture")?.addEventListener("click", () => renderProjectsView());
+  document.getElementById("cr-close-panel")?.addEventListener("click", () => {
+    panel.classList.remove("open");
+  });
+}
+
+function renderCaptureSuccess(platformLabel: string) {
+  currentView = "capture";
+  const panel = document.querySelector(".cr-panel") as HTMLElement;
+  if (!panel) return;
+
+  const currentPlatform = getCurrentPlatform();
+
+  // Build platform grid
+  let gridHtml = "";
+  for (const p of AI_PLATFORMS) {
+    const isCurrent = p.id === currentPlatform;
+    const color = platformColor(p.id);
+    const abbr = platformAbbr(p.id);
+    gridHtml += `
+      <button class="cr-platform-btn" data-platform="${p.id}" ${isCurrent ? "disabled" : ""}>
+        <div class="cr-platform-icon" style="background:${color}">${abbr}</div>
+        <span class="cr-platform-label">${p.label}</span>
+      </button>
+    `;
+  }
+
+  panel.innerHTML = `
+    <div class="cr-panel-header">
+      <button class="cr-back-btn" id="cr-back-capture">${BACK_ICON} Back</button>
+      <span class="cr-panel-title" style="font-size:13px;">Capture</span>
+      <button class="cr-close-btn" id="cr-close-panel">${CLOSE_ICON}</button>
+    </div>
+    <div class="cr-list" style="overflow-y:auto;">
+      <div class="cr-capture-success">
+        <div class="cr-capture-success-icon">${CHECK_ICON}</div>
+        <div class="cr-capture-title">Captured from ${platformLabel}</div>
+        <div class="cr-capture-subtitle">${capturedText.split(/\s+/).length} words · primer ready</div>
+      </div>
+      <div style="padding:0 16px 8px;font-size:12px;font-weight:600;color:#374151;">Send to...</div>
+      <div class="cr-platform-grid">
+        ${gridHtml}
+      </div>
+      <div class="cr-save-hint">Saved to projects · close to inject later</div>
+    </div>
+  `;
+
+  document.getElementById("cr-back-capture")?.addEventListener("click", () => renderProjectsView());
+  document.getElementById("cr-close-panel")?.addEventListener("click", () => {
+    panel.classList.remove("open");
+  });
+
+  // Platform migration click
+  document.querySelectorAll(".cr-platform-btn:not(:disabled)").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const platformId = (btn as HTMLElement).dataset.platform;
+      if (!platformId || !capturedPrimer) return;
+
+      const platform = AI_PLATFORMS.find(p => p.id === platformId);
+      if (!platform) return;
+
+      // Show a brief toast
+      showToast("Opening " + platform.label + "...");
+
+      // Tell background to migrate the primer
+      try {
+        await sendMessage({
+          type: "MIGRATE_PRIMER",
+          payload: {
+            platform: platformId,
+            url: platform.url,
+            text: capturedPrimer,
+          },
+        });
+        showToast("Opened " + platform.label + " ✓");
+      } catch {
+        showToast("Could not open " + platform.label + " — try pasting manually");
+      }
     });
   });
 }
@@ -417,17 +849,11 @@ function renderPrimersView() {
   html += `</div>`;
   panel.innerHTML = html;
 
-  // Back button
-  document.getElementById("cr-back")?.addEventListener("click", () => {
-    renderProjectsView();
-  });
-
-  // Close button
+  document.getElementById("cr-back")?.addEventListener("click", () => renderProjectsView());
   document.getElementById("cr-close-panel")?.addEventListener("click", () => {
     panel.classList.remove("open");
   });
 
-  // Primer click → inject
   document.querySelectorAll(".cr-primer-item").forEach((item) => {
     item.addEventListener("click", () => {
       const id = (item as HTMLElement).dataset.id;
@@ -441,12 +867,11 @@ function renderPrimersView() {
 }
 
 function injectIntoChat(text: string) {
-  // Try common input selectors for ChatGPT, Claude, Gemini
   const selectors = [
-    "#prompt-textarea",           // ChatGPT
-    '[contenteditable="true"]',   // Claude, Gemini
-    "textarea",                   // Fallback
-    '[role="textbox"]',           // Generic
+    "#prompt-textarea",
+    '[contenteditable="true"]',
+    "textarea",
+    '[role="textbox"]',
   ];
 
   for (const sel of selectors) {
@@ -465,7 +890,6 @@ function injectIntoChat(text: string) {
         return;
       }
 
-      // contenteditable div
       if (el.getAttribute("contenteditable") === "true" || el.getAttribute("role") === "textbox") {
         el.focus();
         document.execCommand("insertText", false, text);
@@ -478,6 +902,30 @@ function injectIntoChat(text: string) {
   }
 }
 
+function formatPrimerText(text: string): string {
+  // Simple compression: truncate long lines, deduplicate whitespace
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+  const compressed = lines.map(l => {
+    if (l.length > 200) return l.slice(0, 200) + "...";
+    return l;
+  }).join("\n");
+  return compressed;
+}
+
+function showToast(message: string) {
+  const existing = document.querySelector(".cr-toast");
+  if (existing) existing.remove();
+
+  const toast = document.createElement("div");
+  toast.className = "cr-toast";
+  toast.textContent = message;
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    if (toast.parentNode) toast.remove();
+  }, 2500);
+}
+
 function escapeHtml(text: string): string {
   const div = document.createElement("div");
   div.textContent = text;
@@ -485,12 +933,10 @@ function escapeHtml(text: string): string {
 }
 
 // --- Examine page and inject ---
-export function initRelay(inputSelectors: string[]) {
-  // Wait for page to settle
+export function initRelay(inputSelectors: string[], captureConversation?: () => string) {
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => injectRelayButton(inputSelectors));
+    document.addEventListener("DOMContentLoaded", () => injectRelayButton(inputSelectors, captureConversation));
   } else {
-    // Small delay to let the page fully render
-    setTimeout(() => injectRelayButton(inputSelectors), 1500);
+    setTimeout(() => injectRelayButton(inputSelectors, captureConversation), 1500);
   }
 }

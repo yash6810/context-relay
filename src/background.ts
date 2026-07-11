@@ -1,4 +1,5 @@
 import { ensureSampleData, getProjects, getProject, saveProject, deleteProject, getPrimers, getPrimer, savePrimer } from "./lib/storage";
+import { PRIMER_GENERATOR_URL } from "./lib/constants";
 import type { Project, Primer } from "./types";
 
 // Initialize storage and sample data on install
@@ -85,7 +86,136 @@ async function handleMessage(message: { type: string; payload?: unknown }) {
       }
       return { success: true };
     }
+
+    // --- Conversation Capture: Generate Primer ---
+    case "GENERATE_PRIMER": {
+      const payload = message.payload as { text: string; project: Project };
+      const { text, project } = payload;
+
+      try {
+        const primer = await generatePrimer(text, project);
+        return { primer };
+      } catch (err) {
+        // Fallback: local compression
+        return { primer: compressText(text) };
+      }
+    }
+
+    // --- Conversation Capture: Migrate to another platform ---
+    case "MIGRATE_PRIMER": {
+      const { platform, url, text } = message.payload as {
+        platform: string;
+        url: string;
+        text: string;
+      };
+
+      try {
+        // Open the destination platform in a new tab
+        const tab = await chrome.tabs.create({ url, active: true });
+
+        // Wait for the tab to fully load, then inject
+        await waitForTabComplete(tab.id!);
+
+        // Send the primer text to the content script for injection
+        await chrome.tabs.sendMessage(tab.id!, {
+          type: "INJECT_PRIMER",
+          payload: { text },
+        });
+
+        return { success: true };
+      } catch (err) {
+        return {
+          error: err instanceof Error ? err.message : "Failed to open destination platform",
+        };
+      }
+    }
+
     default:
       return { error: `Unknown message type: ${message.type}` };
   }
+}
+
+/**
+ * Generate a primer from captured conversation text.
+ * Uses the hybrid routing pipeline: tries the FastAPI backend first,
+ * falls back to on-device compression.
+ */
+async function generatePrimer(text: string, project: Project): Promise<string> {
+  // Try the backend API
+  try {
+    const response = await fetch(PRIMER_GENERATOR_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        transcript: text,
+        context: project.currentTask,
+        key_decisions: project.keyDecisions || "",
+        relevant_links: project.relevantLinks || "",
+        additional_notes: project.additionalNotes || "",
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.primer) return data.primer;
+    }
+  } catch {
+    // API unreachable — fall through to local
+  }
+
+  // Fallback: local compression
+  return compressText(text);
+}
+
+/**
+ * Compress text into a simple primer format (local fallback).
+ */
+function compressText(text: string): string {
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const compressed = lines.map((l) => {
+    if (l.length > 300) return l.slice(0, 300) + "...";
+    return l;
+  });
+
+  return compressed.join("\n");
+}
+
+/**
+ * Wait for a tab to finish loading, with timeout.
+ */
+function waitForTabComplete(tabId: number, timeoutMs = 15000): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error("Timeout waiting for tab to load"));
+    }, timeoutMs);
+
+    // Check if already complete
+    chrome.tabs.get(tabId, (tab) => {
+      if (tab.status === "complete") {
+        clearTimeout(timeout);
+        // Small extra delay for page scripts to initialize
+        setTimeout(resolve, 1500);
+        return;
+      }
+    });
+
+    // Listen for tab update
+    const listener = (
+      updatedTabId: number,
+      changeInfo: chrome.tabs.TabChangeInfo
+    ) => {
+      if (updatedTabId === tabId && changeInfo.status === "complete") {
+        clearTimeout(timeout);
+        chrome.tabs.onUpdated.removeListener(listener);
+        // Small extra delay for page scripts to initialize
+        setTimeout(resolve, 1500);
+      }
+    };
+
+    chrome.tabs.onUpdated.addListener(listener);
+  });
 }
