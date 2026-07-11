@@ -39,7 +39,7 @@ Context Relay is a browser extension that eliminates the friction of switching b
 - Generate structured, formatted primers from your project data
 - **Hybrid routing pipeline** — each generation passes through a lightweight local pre-check before deciding on the processing path:
   - **Local (green badge):** If the AI backend is unreachable or the context is short/unchanged, the primer is formatted entirely on-device via markdown compression
-  - **Cloud (indigo badge):** For longer or substantially changed context, the project data is sent to Fireworks AI's Gemma 3 27B model for intelligent summarization; previous primer content is included as additional context
+  - **Cloud (indigo badge):** For longer or substantially changed context, the project data is sent to Fireworks AI's GPT-OSS 120B model for intelligent summarization; previous primer content is included as additional context
 - Every primer records its routing origin (`local` or `cloud`) and model used, visible as an inline badge on history cards
 - Automatic version history with timestamps
 - Expandable cards for reading full primers
@@ -137,6 +137,12 @@ src/
 ├── types.ts             ─ TypeScript type definitions
 └── index.css            ─ Global styles & Tailwind theme
 ```
+
+---
+
+## AMD & Infrastructure Usage
+
+Context Relay's compression pipeline runs on GPT-OSS 120B, served through the Fireworks AI API — the compute infrastructure provided for this hackathon, hosted on AMD hardware. The backend is containerized with Docker and deployed as a standalone FastAPI service on Render.
 
 ---
 
