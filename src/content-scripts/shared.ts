@@ -509,8 +509,19 @@ function injectRelayButton(inputSelectors: string[], captureFn?: () => string) {
     if (msg.type === "INJECT_PRIMER") {
       const text = (msg.payload as { text: string })?.text || "";
       if (text) {
-        injectIntoChat(text);
-        showToast("Injected into " + (getCurrentPlatform() || "chat") + " ✓");
+        // Retry injection every 500ms for up to 10 seconds to handle SPA loading
+        let attempts = 0;
+        const interval = setInterval(() => {
+          attempts++;
+          const injected = injectIntoChat(text);
+          if (injected) {
+            clearInterval(interval);
+            showToast("Injected into " + (getCurrentPlatform() || "chat") + " ✓");
+          } else if (attempts >= 20) {
+            clearInterval(interval);
+            showToast("Could not find chat input to inject into (timeout)");
+          }
+        }, 500);
         sendResponse({ success: true });
       } else {
         sendResponse({ error: "No primer text provided" });
@@ -799,6 +810,13 @@ function renderCaptureSuccess(platformLabel: string) {
 
       // Tell background to migrate the primer
       try {
+        if (capturedPrimer) {
+          try {
+            await navigator.clipboard.writeText(capturedPrimer);
+          } catch (e) {
+            console.warn("Could not write to clipboard", e);
+          }
+        }
         await sendMessage({
           type: "MIGRATE_PRIMER",
           payload: {
@@ -855,51 +873,106 @@ function renderPrimersView() {
   });
 
   document.querySelectorAll(".cr-primer-item").forEach((item) => {
-    item.addEventListener("click", () => {
+    item.addEventListener("click", async () => {
       const id = (item as HTMLElement).dataset.id;
       if (!id) return;
       const primer = primers.find((p) => p.id === id);
       if (!primer) return;
+      try {
+        await navigator.clipboard.writeText(primer.content);
+      } catch (e) {
+        console.warn("Could not copy to clipboard", e);
+      }
       injectIntoChat(primer.content);
       panel.classList.remove("open");
     });
   });
 }
 
-function injectIntoChat(text: string) {
+function injectIntoChat(text: string): boolean {
   const selectors = [
-    "#prompt-textarea",
+    "#prompt-textarea", // ChatGPT
+    ".ProseMirror", // Claude
     '[contenteditable="true"]',
     "textarea",
     '[role="textbox"]',
   ];
 
   for (const sel of selectors) {
-    const el = document.querySelector(sel) as
-      | HTMLTextAreaElement
-      | HTMLInputElement
-      | HTMLElement
-      | null;
-    if (!el) continue;
+    const elements = document.querySelectorAll(sel);
+    for (const elNode of elements) {
+      const el = elNode as HTMLTextAreaElement | HTMLInputElement | HTMLElement;
+      // Skip hidden or tiny elements
+      if (el.offsetHeight === 0 && el.offsetWidth === 0) continue;
+      // Skip elements that are clearly not the main chat input
+      if (el.tagName !== "TEXTAREA" && el.tagName !== "INPUT" && el.getAttribute("contenteditable") !== "true" && el.getAttribute("role") !== "textbox" && !el.classList.contains("ProseMirror")) continue;
 
-    try {
-      if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
-        el.value = text;
-        el.dispatchEvent(new Event("input", { bubbles: true }));
-        el.dispatchEvent(new Event("change", { bubbles: true }));
-        return;
-      }
-
-      if (el.getAttribute("contenteditable") === "true" || el.getAttribute("role") === "textbox") {
+      try {
         el.focus();
-        document.execCommand("insertText", false, text);
-        el.dispatchEvent(new Event("input", { bubbles: true }));
-        return;
+        
+        // Try React native value setter for textarea/input
+        if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
+          const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+            window.HTMLTextAreaElement.prototype,
+            "value"
+          )?.set || Object.getOwnPropertyDescriptor(
+            window.HTMLInputElement.prototype,
+            "value"
+          )?.set;
+          
+          if (nativeInputValueSetter) {
+            nativeInputValueSetter.call(el, text);
+          } else {
+            el.value = text;
+          }
+          el.dispatchEvent(new Event("input", { bubbles: true }));
+          el.dispatchEvent(new Event("change", { bubbles: true }));
+          
+          if (el.value.includes(text.slice(0, 10))) return true;
+        } else {
+          // Contenteditable (ProseMirror, Draft.js, Lexical)
+          
+          // Ensure cursor is inside the element for execCommand to work
+          const selection = window.getSelection();
+          if (selection) {
+            const range = document.createRange();
+            range.selectNodeContents(el);
+            range.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+
+          // 1. Dispatch paste event
+          const dataTransfer = new DataTransfer();
+          dataTransfer.setData("text/plain", text);
+          const pasteEvent = new ClipboardEvent("paste", {
+            clipboardData: dataTransfer,
+            bubbles: true,
+            cancelable: true,
+          });
+          el.dispatchEvent(pasteEvent);
+
+          // 2. Fallback to execCommand if paste wasn't handled or didn't insert text
+          if (!el.textContent?.includes(text.slice(0, 10))) {
+            document.execCommand("insertText", false, text);
+          }
+          
+          // 3. Last resort
+          if (!el.textContent?.includes(text.slice(0, 10))) {
+            el.textContent = text;
+          }
+
+          el.dispatchEvent(new Event("input", { bubbles: true }));
+          
+          // Verify
+          if (el.textContent?.includes(text.slice(0, 10))) return true;
+        }
+      } catch {
+        continue;
       }
-    } catch {
-      continue;
     }
   }
+  return false;
 }
 
 function formatPrimerText(text: string): string {
@@ -939,4 +1012,34 @@ export function initRelay(inputSelectors: string[], captureConversation?: () => 
   } else {
     setTimeout(() => injectRelayButton(inputSelectors, captureConversation), 1500);
   }
+  
+  // Drift Detector Check (every 10 seconds)
+  setInterval(async () => {
+    // Only check if we have primers loaded in this tab context
+    if (primers.length === 0) return;
+    
+    let text = "";
+    for (const sel of inputSelectors) {
+      const el = document.querySelector(sel) as HTMLElement;
+      if (el) {
+        text += (el.innerText || el.textContent || (el as HTMLInputElement).value || "") + " ";
+      }
+    }
+    if (text.length > 50) {
+      // Find latest primer we might have injected
+      const latestPrimer = primers.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+      if (latestPrimer) {
+        // Simple overlap check
+        const primerWords = new Set(latestPrimer.content.toLowerCase().split(/\W+/));
+        const typedWords = new Set(text.toLowerCase().split(/\W+/));
+        let overlap = 0;
+        for (const w of typedWords) {
+          if (w.length > 4 && primerWords.has(w)) overlap++;
+        }
+        if (overlap === 0 && typedWords.size > 20) {
+          showToast("Context drift detected! Consider generating a new primer.");
+        }
+      }
+    }
+  }, 10000);
 }

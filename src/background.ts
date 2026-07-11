@@ -22,6 +22,59 @@ chrome.runtime.onInstalled.addListener(async () => {
 
   // Initialize sample data
   await ensureSampleData();
+
+  // Create Context Menu for Auto-Scrape
+  chrome.contextMenus.create({
+    id: "scrape-context",
+    title: "Add Page to Context Relay",
+    contexts: ["page", "selection"]
+  });
+});
+
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId === "scrape-context" && tab?.id) {
+    try {
+      const results = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: () => {
+          // If user selected text, use that, otherwise scrape body
+          const selection = window.getSelection()?.toString();
+          if (selection && selection.trim()) return selection;
+          
+          // Fallback readability logic
+          const clone = document.cloneNode(true) as Document;
+          const badTags = ['script', 'style', 'nav', 'header', 'footer', 'noscript'];
+          for (const tag of badTags) {
+            clone.querySelectorAll(tag).forEach(e => e.remove());
+          }
+          return clone.body.innerText.replace(/\n{3,}/g, '\n\n').trim();
+        }
+      });
+      
+      const scrapedText = results[0].result;
+      if (scrapedText) {
+        // Create new project
+        const newProject = {
+          id: `proj-${Date.now()}`,
+          name: tab.title || "Scraped Page",
+          currentTask: "Review scraped context",
+          keyDecisions: "",
+          relevantLinks: tab.url || "",
+          additionalNotes: scrapedText.slice(0, 5000), // Enforce limit
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        await saveProject(newProject);
+        
+        // Open side panel
+        if (chrome.sidePanel) {
+          await chrome.sidePanel.open({ windowId: tab.windowId });
+        }
+      }
+    } catch (e) {
+      console.error("Failed to scrape page", e);
+    }
+  }
 });
 
 // Handle messages from content scripts, popup, and side panel

@@ -7,12 +7,13 @@
     "dev": "vite",
     "build": "vite build && node scripts/build-content-scripts.js",
     "preview": "vite preview",
-    "package": "npm run build && echo 'Extension ready in dist/'"
+    "package": "npm run build && node scripts/package-extension.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.1",
     "@tailwindcss/vite": "^4.1.18",
     "@types/canvas-confetti": "^1.9.0",
+    "@uiw/react-md-editor": "^4.1.1",
     "canvas-confetti": "^1.9.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -25,6 +26,7 @@
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^5.1.1",
+    "adm-zip": "^0.6.0",
     "esbuild": "^0.28.1",
     "globals": "^16.5.0",
     "typescript": "~5.9.3",

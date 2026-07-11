@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
+import MDEditor from "@uiw/react-md-editor";
 import { getProject, saveProject } from "../lib/storage";
+import { useTheme } from "../context/ThemeContext";
 import type { ProjectTemplate } from "../types";
 
 function generateId(): string {
@@ -14,6 +16,7 @@ export default function ProjectForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const location = useLocation();
+  const { theme } = useTheme();
   const isEdit = Boolean(id);
 
   const [name, setName] = useState("");
@@ -149,25 +152,24 @@ export default function ProjectForm() {
         </div>
 
         {/* Current Task */}
-        <div>
+        <div data-color-mode={theme}>
           <label htmlFor="currentTask" className="block text-sm font-medium mb-1.5">
             Current Task <span className="text-destructive">*</span>
           </label>
-          <textarea
-            id="currentTask"
-            rows={4}
-            value={currentTask}
-            onChange={(e) => {
-              setCurrentTask(e.target.value);
-              if (errors.currentTask) setErrors((prev) => ({ ...prev, currentTask: undefined }));
-            }}
-            placeholder="What are you working on right now?"
-            className={`w-full px-4 py-2.5 rounded-lg border bg-card text-fg placeholder:text-muted-fg focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all duration-150 resize-y min-h-[100px] ${
-              errors.currentTask ? "border-destructive" : "border-border"
-            }`}
-            aria-invalid={!!errors.currentTask}
-            aria-describedby={errors.currentTask ? "task-error" : undefined}
-          />
+          <div className={`${errors.currentTask ? "border border-destructive rounded-lg" : ""}`}>
+            <MDEditor
+              value={currentTask}
+              onChange={(val) => {
+                setCurrentTask(val || "");
+                if (errors.currentTask) setErrors((prev) => ({ ...prev, currentTask: undefined }));
+              }}
+              height={200}
+              preview="edit"
+              textareaProps={{
+                placeholder: "What are you working on right now?"
+              }}
+            />
+          </div>
           {errors.currentTask && (
             <p id="task-error" className="text-destructive text-sm mt-1">
               {errors.currentTask}
@@ -194,47 +196,50 @@ export default function ProjectForm() {
         </div>
 
         {/* Key Decisions */}
-        <div>
+        <div data-color-mode={theme}>
           <label htmlFor="keyDecisions" className="block text-sm font-medium mb-1.5">
             Key Decisions
           </label>
-          <textarea
-            id="keyDecisions"
-            rows={3}
+          <MDEditor
             value={keyDecisions}
-            onChange={(e) => setKeyDecisions(e.target.value)}
-            placeholder="Decisions made so far, with rationale..."
-            className="w-full px-4 py-2.5 rounded-lg border border-border bg-card text-fg placeholder:text-muted-fg focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all duration-150 resize-y min-h-[80px]"
+            onChange={(val) => setKeyDecisions(val || "")}
+            height={150}
+            preview="edit"
+            textareaProps={{
+              placeholder: "Decisions made so far, with rationale..."
+            }}
           />
         </div>
 
         {/* Relevant Links */}
-        <div>
+        <div data-color-mode={theme}>
           <label htmlFor="relevantLinks" className="block text-sm font-medium mb-1.5">
             Relevant Links
           </label>
-          <textarea
-            id="relevantLinks"
-            rows={3}
+          <MDEditor
             value={relevantLinks}
-            onChange={(e) => setRelevantLinks(e.target.value)}
-            placeholder="One per line, or comma-separated URLs..."
-            className="w-full px-4 py-2.5 rounded-lg border border-border bg-card text-fg placeholder:text-muted-fg focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all duration-150 resize-y min-h-[80px]"
+            onChange={(val) => setRelevantLinks(val || "")}
+            height={150}
+            preview="edit"
+            textareaProps={{
+              placeholder: "One per line, or comma-separated URLs..."
+            }}
           />
         </div>
 
         {/* Additional Notes */}
-        <div>
+        <div data-color-mode={theme}>
           <label htmlFor="additionalNotes" className="block text-sm font-medium mb-1.5">
             Additional Notes
           </label>
-          <textarea
-            id="additionalNotes"
-            rows={3}
+          <MDEditor
             value={additionalNotes}
-            onChange={(e) => setAdditionalNotes(e.target.value)}
-            placeholder="Anything else that's useful context..."
-            className="w-full px-4 py-2.5 rounded-lg border border-border bg-card text-fg placeholder:text-muted-fg focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all duration-150 resize-y min-h-[80px]"
+            onChange={(val) => setAdditionalNotes(val || "")}
+            height={150}
+            preview="edit"
+            textareaProps={{
+              placeholder: "Anything else that's useful context..."
+            }}
           />
         </div>
 

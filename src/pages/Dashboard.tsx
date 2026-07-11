@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getProjects } from "../lib/storage";
+import { getProjects, getPrimers } from "../lib/storage";
 import { TEMPLATES } from "../lib/constants";
-import type { Project, ProjectTemplate } from "../types";
+import type { Project, ProjectTemplate, Primer } from "../types";
+import InstallInstructionsModal from "../components/InstallInstructionsModal";
 
 function relativeTime(isoDate: string): string {
   const now = Date.now();
@@ -143,14 +144,49 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showInstallInstructions, setShowInstallInstructions] = useState(false);
+  const [activeTabDomain, setActiveTabDomain] = useState<string | null>(null);
+  
+  const [stats, setStats] = useState({ savedTokens: 0, savedCost: 0, localRuns: 0 });
 
   useEffect(() => {
-    getProjects().then((all) => {
+    // Attempt to detect active tab
+    try {
+      if (typeof chrome !== 'undefined' && chrome.tabs) {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs && tabs.length > 0 && tabs[0].url) {
+            const url = new URL(tabs[0].url);
+            setActiveTabDomain(url.hostname.replace(/^www\./, ''));
+          }
+        });
+      }
+    } catch (e) {
+      console.warn("Could not get active tab:", e);
+    }
+
+    Promise.all([getProjects(), getPrimers()]).then(([allProjects, allPrimers]) => {
       setProjects(
-        all.sort(
+        allProjects.sort(
           (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
         )
       );
+      
+      // Calculate AMD stats
+      let savedTokens = 0;
+      let localRuns = 0;
+      allPrimers.forEach(p => {
+        // Assume primers without routing flag are 'local' by default (v1)
+        // or explicitly tagged as 'local'
+        if (p.routing !== 'cloud') {
+          localRuns++;
+          // Rough token estimation
+          savedTokens += Math.ceil(p.content.length / 4);
+        }
+      });
+      // Fireworks pricing: e.g. Llama-3 8B is ~$0.20 per 1M tokens
+      const savedCost = (savedTokens / 1000000) * 0.20;
+      setStats({ savedTokens, savedCost, localRuns });
+      
       setLoading(false);
     });
   }, []);
@@ -181,8 +217,20 @@ export default function Dashboard() {
         selectedTags.some((t) => p.tags?.includes(t))
       );
     }
+    
+    // Sort by active tab match
+    if (activeTabDomain && !searchQuery) {
+      list = [...list].sort((a, b) => {
+        const aMatch = a.relevantLinks.includes(activeTabDomain);
+        const bMatch = b.relevantLinks.includes(activeTabDomain);
+        if (aMatch && !bMatch) return -1;
+        if (!aMatch && bMatch) return 1;
+        return 0;
+      });
+    }
+    
     return list;
-  }, [projects, searchQuery, selectedTags]);
+  }, [projects, searchQuery, selectedTags, activeTabDomain]);
 
   const handleTemplateSelect = (t: ProjectTemplate) => {
     setShowTemplates(false);
@@ -205,10 +253,39 @@ export default function Dashboard() {
 
   return (
     <div>
+      {/* Dashboard Stats */}
+      <div className="mb-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+          <div className="text-sm text-muted-fg font-medium">Local AMD Executions</div>
+          <div className="text-2xl font-bold text-fg mt-1">{stats.localRuns}</div>
+        </div>
+        <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+          <div className="text-sm text-muted-fg font-medium">Tokens Saved (AMD ROCm)</div>
+          <div className="text-2xl font-bold text-fg mt-1">{(stats.savedTokens / 1000).toFixed(1)}k</div>
+        </div>
+        <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+          <div className="text-sm text-emerald-600 font-medium">Estimated Cloud Cost Avoided</div>
+          <div className="text-2xl font-bold text-emerald-700 mt-1">${stats.savedCost.toFixed(4)}</div>
+        </div>
+      </div>
+
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Projects</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <a
+            href="/context-relay-extension.zip"
+            download
+            onClick={() => setShowInstallInstructions(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 text-white font-medium text-sm hover:bg-emerald-700 active:scale-[0.97] transition-all duration-150 cursor-pointer focus-visible:ring-2 focus-visible:ring-emerald-500"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" x2="12" y1="15" y2="3" />
+            </svg>
+            Download Extension
+          </a>
           <button
             onClick={() => setShowTemplates(true)}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-transparent text-fg border border-border font-medium text-sm hover:bg-muted active:scale-[0.97] transition-all duration-150 cursor-pointer focus-visible:ring-2 focus-visible:ring-accent"
@@ -373,6 +450,11 @@ export default function Dashboard() {
           onSelect={handleTemplateSelect}
           onClose={() => setShowTemplates(false)}
         />
+      )}
+
+      {/* Install Instructions modal */}
+      {showInstallInstructions && (
+        <InstallInstructionsModal onClose={() => setShowInstallInstructions(false)} />
       )}
     </div>
   );

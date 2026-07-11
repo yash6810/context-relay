@@ -6,6 +6,12 @@ import { PRIMER_GENERATOR_URL } from "../lib/constants";
 import confetti from "canvas-confetti";
 import type { Project, Primer } from "../types";
 
+interface TraceEvent {
+  step: string;
+  status: "running" | "done";
+  details?: string;
+}
+
 function relativeTime(isoDate: string): string {
   const now = Date.now();
   const then = new Date(isoDate).getTime();
@@ -311,10 +317,15 @@ export default function PrimerView() {
     loadPrimers();
   }, [loadPrimers, showPrimer]);
 
+  const [traces, setTraces] = useState<TraceEvent[]>([]);
+
   const handleGenerate = async () => {
     if (!project) return;
     setIsGenerating(true);
     setGenerationError(null);
+    setCurrentPrimerContent("");
+    setTraces([]);
+    setShowPrimer(true);
 
     try {
       // Get the last primer content for the Edge Function to use as context
@@ -343,25 +354,98 @@ export default function PrimerView() {
       if (!res.ok) {
         throw new Error(`Generation failed (${res.status})`);
       }
+      
+      if (!res.body) throw new Error("No response body");
 
-      const data = await res.json();
-      const content = data.primer || formatPrimer(project);
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let doneReading = false;
+      let finalContent = "";
+      let finalRouting: string | undefined;
+      let finalModel: string | undefined;
+      let buffer = "";
 
-      setCurrentPrimerContent(content);
-      setCurrentPrimerRouting(data.routing || undefined);
-      setCurrentPrimerModel(data.model_used || undefined);
-      setShowPrimer(true);
+      while (!doneReading) {
+        const { value, done } = await reader.read();
+        if (done) {
+          doneReading = true;
+          break;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() || "";
+
+        for (const part of parts) {
+          const lines = part.split("\n");
+          let eventType = "message";
+          let data = "";
+
+          for (const line of lines) {
+            if (line.startsWith("event: ")) {
+              eventType = line.substring(7);
+            } else if (line.startsWith("data: ")) {
+              data = line.substring(6);
+            }
+          }
+
+          if (eventType === "done" || data === "[DONE]") {
+            doneReading = true;
+            break;
+          }
+
+          if (eventType === "metadata") {
+            try {
+              const meta = JSON.parse(data);
+              finalRouting = meta.routing;
+              finalModel = meta.model_used;
+              setCurrentPrimerRouting(finalRouting);
+              setCurrentPrimerModel(finalModel);
+            } catch (e) {}
+          } else if (eventType === "chunk") {
+            try {
+              const chunk = JSON.parse(data);
+              finalContent += chunk;
+              setCurrentPrimerContent(finalContent);
+            } catch (e) {}
+          } else if (eventType === "trace") {
+            try {
+              const trace = JSON.parse(data) as TraceEvent;
+              setTraces((prev) => {
+                const existing = prev.findIndex(t => t.step === trace.step);
+                if (existing >= 0) {
+                  const newTraces = [...prev];
+                  newTraces[existing] = trace;
+                  return newTraces;
+                }
+                return [...prev, trace];
+              });
+            } catch (e) {}
+          } else if (eventType === "error") {
+            try {
+              setGenerationError(JSON.parse(data));
+            } catch (e) {
+              setGenerationError(data);
+            }
+          }
+        }
+      }
 
       // Save to history
       const now = new Date().toISOString();
       const newPrimer: Primer = {
         id: `p-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         projectId: project.id,
-        content,
+        content: finalContent || formatPrimer(project),
         createdAt: now,
-        routing: data.routing || undefined,
-        modelUsed: data.model_used || undefined,
+        routing: finalRouting,
+        modelUsed: finalModel,
       };
+      
+      if (!finalContent) {
+        setCurrentPrimerContent(newPrimer.content);
+      }
+
       if (id) {
         await savePrimer(newPrimer);
         loadPrimers();
@@ -656,10 +740,37 @@ export default function PrimerView() {
           </div>
         )}
 
-        {showPrimer && currentPrimerContent && (
+        {showPrimer && (
           <div className="mt-6 space-y-3 animate-slide-in-top">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <p className="text-sm font-medium text-muted-fg">Generated Primer <RoutingBadge routing={currentPrimerRouting} modelUsed={currentPrimerModel} /></p>
+            
+            {/* Agentic Trace Stepper */}
+            {traces.length > 0 && (
+              <div className="bg-card border border-border rounded-lg p-4 mb-4">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-fg mb-3">Agentic Pipeline</h3>
+                <div className="space-y-3">
+                  {traces.map((t, idx) => (
+                    <div key={idx} className="flex items-start gap-3">
+                      <div className="mt-0.5">
+                        {t.status === "running" ? (
+                          <svg className="animate-spin text-accent" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
+                        ) : (
+                          <svg className="text-emerald-500" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{t.step}</p>
+                        {t.details && <p className="text-xs text-muted-fg">{t.details}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {currentPrimerContent && (
+              <>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <p className="text-sm font-medium text-muted-fg">Generated Primer <RoutingBadge routing={currentPrimerRouting} modelUsed={currentPrimerModel} /></p>
               <div className="flex items-center gap-2">
                 <ExportMenu content={currentPrimerContent} projectName={project.name} primerId={"current"} createdAt={new Date().toISOString()} />
                 <button
@@ -688,6 +799,8 @@ export default function PrimerView() {
             <pre className="bg-muted rounded-lg p-4 text-sm font-mono whitespace-pre-wrap overflow-x-auto border border-border">
               {currentPrimerContent}
             </pre>
+            </>
+            )}
           </div>
         )}
       </div>

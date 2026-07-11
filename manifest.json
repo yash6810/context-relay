@@ -6,8 +6,10 @@
   "permissions": [
     "storage",
     "sidePanel",
-    "clipboardWrite",
-    "tabs"
+    "tabs",
+    "contextMenus",
+    "scripting",
+    "activeTab"
   ],
   "host_permissions": [
     "https://chatgpt.com/*",

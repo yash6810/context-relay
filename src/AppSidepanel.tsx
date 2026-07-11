@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useTheme } from "./context/ThemeContext";
 import { getProjects, getPrimers, ensureSampleData } from "./lib/storage";
-import type { Project, Primer } from "./types";
+import type { Project, Primer, AIPlatform } from "./types";
+import { AI_PLATFORMS } from "./types";
 
 function relativeTime(isoDate: string): string {
   const now = Date.now();
@@ -78,6 +79,26 @@ export default function AppSidepanel() {
       setTimeout(() => setCopiedId(null), 2000);
     }
   }, []);
+
+  const openPlatform = useCallback(async (primer: Primer, platform: typeof AI_PLATFORMS[0]) => {
+    // 1. Copy to clipboard
+    await handleCopy(primer);
+    // 2. Tell background script to open tab and inject
+    try {
+      await chrome.runtime.sendMessage({
+        type: "MIGRATE_PRIMER",
+        payload: {
+          platform: platform.id,
+          url: platform.url,
+          text: primer.content,
+        }
+      });
+    } catch (e) {
+      console.warn("Could not send MIGRATE_PRIMER", e);
+      // Fallback: just open the url
+      window.open(platform.url, "_blank");
+    }
+  }, [handleCopy]);
 
   // Filter projects by search
   const filteredProjects = useMemo(() => {
@@ -255,6 +276,22 @@ export default function AppSidepanel() {
                                 <line x1="12" x2="12" y1="15" y2="3" />
                               </svg>
                             </button>
+                            <div className="w-px h-3 bg-border mx-0.5"></div>
+                            {/* AI Platforms */}
+                            {AI_PLATFORMS.map((platform) => (
+                              <button
+                                key={platform.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openPlatform(primer, platform);
+                                }}
+                                className="inline-flex items-center justify-center w-6 h-6 rounded bg-card border border-border text-xs font-medium hover:bg-accent hover:text-white hover:border-accent transition-all duration-150 cursor-pointer"
+                                title={`Open with ${platform.name}`}
+                              >
+                                {platform.name.charAt(0)}
+                              </button>
+                            ))}
+                            <div className="w-px h-3 bg-border mx-0.5"></div>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
