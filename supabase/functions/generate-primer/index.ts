@@ -98,6 +98,8 @@ Deno.serve(async (req: Request) => {
       const apiKey = Deno.env.get("FIREWORKS_API_KEY");
 
       let primer: string;
+      let routing = "local";
+      let model_used: string | undefined;
 
       if (apiKey) {
         const userPrompt = [
@@ -134,6 +136,8 @@ Deno.serve(async (req: Request) => {
 
           const data = await resp.json();
           primer = data.choices[0].message.content.trim();
+          routing = "cloud";
+          model_used = "gemma-3-27b-it";
         } catch (_err) {
           // Fallback to plain-text formatting
           primer = buildFallback(
@@ -154,7 +158,7 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      return new Response(JSON.stringify({ primer }), {
+      return new Response(JSON.stringify({ primer, routing, model_used }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } catch (err) {

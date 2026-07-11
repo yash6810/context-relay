@@ -1,7 +1,6 @@
-// ⚠️ Replace this URL with your deployed FastAPI backend URL
-// e.g. "https://context-relay.onrender.com/generate-primer"
+// ⚠️ Replace this URL with your Supabase Edge Function or FastAPI backend
 export const PRIMER_GENERATOR_URL =
-  "https://context-relay-backend.onrender.com/generate-primer";
+  "https://bnkanwtzusfbsbqthona.supabase.co/functions/v1/generate-primer";
 
 export const SITES: Record<string, { hostname: string; inputSelector: string; buttonInsertSelector?: string }> = {
   CHATGPT: {

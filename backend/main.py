@@ -128,7 +128,7 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 
 FIREWORKS_URL = "https://api.fireworks.ai/inference/v1/chat/completions"
-FIREWORKS_MODEL = "accounts/fireworks/models/gemma-3-27b-it"
+FIREWORKS_MODEL = "accounts/fireworks/models/gemma2-9b-it"
 
 FIREWORKS_API_KEY = os.environ.get("FIREWORKS_API_KEY", "")
 
