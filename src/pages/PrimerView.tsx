@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { getProject, savePrimer, getPrimers } from "../lib/storage";
+import { getProject, savePrimer, getPrimers, deleteProject } from "../lib/storage";
+import { supabase } from "../lib/supabase";
+import { PRIMER_GENERATOR_URL } from "../lib/constants";
+import confetti from "canvas-confetti";
 import type { Project, Primer } from "../types";
 
 function relativeTime(isoDate: string): string {
@@ -131,13 +134,30 @@ function ExportMenu({ content, projectName, primerId, createdAt }: { content: st
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div className="absolute right-0 top-full mt-1 z-20 w-44 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
             <button onClick={handleMarkdown} className="w-full text-left px-4 py-2.5 text-sm text-fg hover:bg-muted transition-colors duration-100 cursor-pointer flex items-center gap-2">
-              <span className="text-xs">📝</span> Markdown (.md)
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-muted-fg">
+                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" x2="8" y1="13" y2="13" />
+                <line x1="16" x2="8" y1="17" y2="17" />
+                <line x1="10" x2="8" y1="9" y2="9" />
+              </svg>
+              Markdown (.md)
             </button>
             <button onClick={handleJSON} className="w-full text-left px-4 py-2.5 text-sm text-fg hover:bg-muted transition-colors duration-100 cursor-pointer flex items-center gap-2 border-t border-border">
-              <span className="text-xs">📄</span> JSON (.json)
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-muted-fg">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+              JSON (.json)
             </button>
             <button onClick={handleShare} className="w-full text-left px-4 py-2.5 text-sm text-fg hover:bg-muted transition-colors duration-100 cursor-pointer flex items-center gap-2 border-t border-border">
-              <span className="text-xs">🔗</span> {linkCopied ? "Link copied!" : "Shareable link"}
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-muted-fg">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+              </svg>
+              {linkCopied ? "Link copied!" : "Shareable link"}
             </button>
           </div>
         </>
@@ -221,6 +241,9 @@ export default function PrimerView() {
   const [copied, setCopied] = useState(false);
   const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
   const [primers, setPrimers] = useState<Primer[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Load project
   useEffect(() => {
@@ -241,7 +264,7 @@ export default function PrimerView() {
   }, [id]);
 
   // Load primers for this project
-  useEffect(() => {
+  const loadPrimers = useCallback(() => {
     if (!id) return;
     getPrimers(id).then((list) => {
       setPrimers(
@@ -250,22 +273,90 @@ export default function PrimerView() {
         )
       );
     });
-  }, [id, showPrimer]);
+  }, [id]);
 
-  const handleGenerate = () => {
+  useEffect(() => {
+    loadPrimers();
+  }, [loadPrimers, showPrimer]);
+
+  const handleGenerate = async () => {
     if (!project) return;
-    const content = formatPrimer(project);
-    setCurrentPrimerContent(content);
-    setShowPrimer(true);
+    setIsGenerating(true);
+    setGenerationError(null);
 
-    const now = new Date().toISOString();
-    const newPrimer: Primer = {
-      id: `p-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      projectId: project.id,
-      content,
-      createdAt: now,
-    };
-    savePrimer(newPrimer);
+    try {
+      // Get the Supabase session for auth
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      const res = await fetch(PRIMER_GENERATOR_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          project_name: project.name,
+          current_task: project.currentTask,
+          key_decisions: project.keyDecisions,
+          relevant_links: project.relevantLinks,
+          additional_notes: project.additionalNotes,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Generation failed (${res.status})`);
+      }
+
+      const data = await res.json();
+      const content = data.primer || formatPrimer(project);
+
+      setCurrentPrimerContent(content);
+      setShowPrimer(true);
+
+      // Save to history
+      const now = new Date().toISOString();
+      const newPrimer: Primer = {
+        id: `p-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        projectId: project.id,
+        content,
+        createdAt: now,
+      };
+      if (id) {
+        await savePrimer(newPrimer);
+        loadPrimers();
+      }
+
+      // 🎉 Celebration!
+      confetti({
+        particleCount: 100,
+        spread: 80,
+        origin: { y: 0.6 },
+        colors: ["#6366f1", "#22c55e", "#f59e0b", "#3b82f6"],
+        disableForReducedMotion: true,
+      });
+    } catch (err) {
+      // Fallback to local formatting
+      const content = formatPrimer(project);
+      setCurrentPrimerContent(content);
+      setShowPrimer(true);
+      setGenerationError("AI generation unavailable. Using local formatting.");
+
+      // Save to history
+      const now = new Date().toISOString();
+      const newPrimer: Primer = {
+        id: `p-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        projectId: project.id,
+        content,
+        createdAt: now,
+      };
+      if (id) {
+        await savePrimer(newPrimer);
+        loadPrimers();
+      }
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleCopyCurrent = async () => {
@@ -288,10 +379,27 @@ export default function PrimerView() {
     }
   };
 
+  const handleDeleteProject = async () => {
+    if (!project || !id) return;
+    try {
+      await deleteProject(id);
+      navigate("/", { replace: true });
+    } catch {
+      setGenerationError("Couldn't delete the project. Try again?");
+    }
+    setShowDeleteConfirm(false);
+  };
+
   if (loading) {
     return (
-      <div className="text-center py-16">
-        <p className="text-muted-fg">Loading project...</p>
+      <div className="animate-pulse space-y-6">
+        <div className="h-4 w-24 bg-muted rounded" />
+        <div className="h-10 w-3/4 bg-muted rounded-xl" />
+        <div className="space-y-4 mt-10">
+          <div className="h-28 bg-muted rounded-xl" />
+          <div className="h-28 bg-muted rounded-xl" />
+          <div className="h-28 bg-muted rounded-xl" />
+        </div>
       </div>
     );
   }
@@ -357,16 +465,69 @@ export default function PrimerView() {
             </div>
           )}
         </div>
-        <Link
-          to={`/projects/${project.id}/edit`}
-          className="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-transparent text-fg border border-border font-medium text-sm hover:bg-muted transition-all duration-150 cursor-pointer focus-visible:ring-2 focus-visible:ring-accent"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-          </svg>
-          Edit
-        </Link>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link
+            to={`/projects/${project.id}/edit`}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-transparent text-fg border border-border font-medium text-sm hover:bg-muted transition-all duration-150 cursor-pointer focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+            </svg>
+            Edit
+          </Link>
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-transparent text-destructive border border-destructive/40 font-medium text-sm hover:bg-destructive/10 transition-all duration-150 cursor-pointer focus-visible:ring-2 focus-visible:ring-destructive"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18" />
+              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+              <line x1="10" x2="10" y1="11" y2="17" />
+              <line x1="14" x2="14" y1="11" y2="17" />
+            </svg>
+            Delete
+          </button>
+        </div>
       </div>
+
+      {/* Delete confirmation dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50" onClick={() => setShowDeleteConfirm(false)} />
+          <div className="relative bg-card border border-border rounded-2xl shadow-2xl p-6 max-w-sm w-full z-10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-destructive/10 shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-destructive">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" x2="12" y1="9" y2="13" />
+                  <line x1="12" x2="12.01" y1="17" y2="17" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-base font-semibold">Delete project?</h3>
+                <p className="text-sm text-muted-fg mt-0.5">
+                  All primers and context for <strong>{project.name}</strong> will be permanently removed.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 justify-end">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-transparent border border-border text-muted-fg hover:text-fg hover:bg-muted transition-all duration-150 cursor-pointer focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteProject}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-destructive text-white hover:bg-destructive/90 active:scale-[0.97] transition-all duration-150 cursor-pointer focus-visible:ring-2 focus-visible:ring-destructive"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Project context summary */}
       <div className="space-y-4 mb-10">
@@ -419,18 +580,41 @@ export default function PrimerView() {
         <h2 className="text-lg font-semibold mb-4">Primer Generator</h2>
         <button
           onClick={handleGenerate}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent text-white font-medium text-sm hover:bg-accent-hover active:scale-[0.97] transition-all duration-150 cursor-pointer focus-visible:ring-2 focus-visible:ring-accent"
+          disabled={isGenerating}
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent text-white font-medium text-sm hover:bg-accent-hover active:scale-[0.97] disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100 transition-all duration-150 cursor-pointer focus-visible:ring-2 focus-visible:ring-accent"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 3v12" />
-            <path d="m9 12 3 3 3-3" />
-            <path d="M6 20h12" />
-          </svg>
-          Generate Primer
+          {isGenerating ? (
+            <>
+              <svg className="animate-spin" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
+              Generating…
+            </>
+          ) : (
+            <>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3v12" />
+                <path d="m9 12 3 3 3-3" />
+                <path d="M6 20h12" />
+              </svg>
+              Generate Primer
+            </>
+          )}
         </button>
 
+        {generationError && (
+          <div className="mt-4 flex items-start gap-2.5 p-3 rounded-lg bg-warning/10 border border-warning/30 text-sm text-warning-fg">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-0.5">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" x2="12" y1="9" y2="13" />
+              <line x1="12" x2="12.01" y1="17" y2="17" />
+            </svg>
+            <span>{generationError}</span>
+          </div>
+        )}
+
         {showPrimer && currentPrimerContent && (
-          <div className="mt-6 space-y-3">
+          <div className="mt-6 space-y-3 animate-slide-in-top">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <p className="text-sm font-medium text-muted-fg">Generated Primer</p>
               <div className="flex items-center gap-2">
@@ -473,8 +657,8 @@ export default function PrimerView() {
             {primers.length} {primers.length === 1 ? "primer" : "primers"} generated
           </p>
           <div className="space-y-3">
-            {primers.map((primer) => (
-              <div key={primer.id}>
+            {primers.map((primer, index) => (
+              <div key={primer.id} className="animate-slide-in-bottom" style={{ animationDelay: `${index * 80}ms` }}>
                 <button
                   onClick={() =>
                     setExpandedHistoryId(
@@ -550,7 +734,7 @@ function Section({
     <div className="bg-card border border-border rounded-xl p-4 sm:p-5">
       <div className="flex items-center gap-2 mb-2">
         <span className="text-accent">{icon}</span>
-        <h3 className="text-sm font-semibold text-muted-fg uppercase tracking-wider">
+        <h3 className="text-sm font-semibold text-fg uppercase tracking-wider">
           {title}
         </h3>
       </div>

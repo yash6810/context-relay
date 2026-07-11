@@ -25,3 +25,4 @@ dist-ssr
 
 # Deck files (hackathon presentations)
 src/deck/
+design-system/MASTER.md

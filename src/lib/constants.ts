@@ -1,3 +1,6 @@
+export const PRIMER_GENERATOR_URL =
+  "https://bnkanwtzusfbsbqthona.supabase.co/functions/v1/generate-primer";
+
 export const SITES: Record<string, { hostname: string; inputSelector: string; buttonInsertSelector?: string }> = {
   CHATGPT: {
     hostname: "chatgpt.com",

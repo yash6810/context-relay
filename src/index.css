@@ -65,3 +65,44 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ── Entrance animations ─────────────────────────── */
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slide-in-from-top-2 {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-from-bottom-3 {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 300ms ease-out both;
+}
+
+.animate-slide-in-top {
+  animation: slide-in-from-top-2 300ms ease-out both;
+}
+
+.animate-slide-in-bottom {
+  animation: slide-in-from-bottom-3 400ms ease-out both;
+}
