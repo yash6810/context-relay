@@ -1,7 +1,7 @@
 // ⚠️ Replace this URL with your deployed FastAPI backend URL
 // e.g. "https://context-relay.onrender.com/generate-primer"
 export const PRIMER_GENERATOR_URL =
-  "__FASTAPI_BASE_URL__/generate-primer";
+  "https://context-relay-backend.onrender.com/generate-primer";
 
 export const SITES: Record<string, { hostname: string; inputSelector: string; buttonInsertSelector?: string }> = {
   CHATGPT: {
