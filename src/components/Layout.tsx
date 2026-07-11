@@ -1,8 +1,10 @@
 import { Link, useLocation } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
+import { useAuth } from "../context/AuthContext";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { theme, toggleTheme } = useTheme();
+  const { user, syncing, signOut } = useAuth();
   const location = useLocation();
 
   return (
@@ -19,7 +21,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </Link>
 
           {/* Nav */}
-          <nav className="flex items-center gap-4">
+          <nav className="flex items-center gap-3">
             <Link
               to="/"
               className={`text-sm font-medium transition-colors duration-150 ${
@@ -38,6 +40,46 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             >
               History
             </Link>
+
+            {/* Sync indicator */}
+            {syncing && (
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-accent-light/50 text-xs text-accent">
+                <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+                Syncing
+              </div>
+            )}
+            {!syncing && user && (
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-success/10 text-xs text-success">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                Synced
+              </div>
+            )}
+
+            {/* Auth button */}
+            {user ? (
+              <div className="flex items-center gap-2">
+                <span className="hidden sm:inline text-xs text-muted-fg max-w-[100px] truncate">
+                  {user.email}
+                </span>
+                <button
+                  onClick={signOut}
+                  className="text-xs font-medium text-muted-fg hover:text-destructive transition-colors duration-150 cursor-pointer focus-visible:ring-2 focus-visible:ring-accent rounded px-1"
+                >
+                  Sign out
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/auth"
+                className="text-xs font-medium px-3 py-1.5 rounded-lg bg-accent text-white hover:bg-accent-hover transition-all duration-150 cursor-pointer active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                Sign in
+              </Link>
+            )}
 
             {/* Dark mode toggle */}
             <button

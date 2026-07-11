@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Context Relay — Hackathon Pitch Deck</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+  <style>
+    /* --- Shared Layout --- */
+    html, body, .reveal, .reveal * {
+      font-family: var(--r-main-font), 'Segoe UI', system-ui, -apple-system, sans-serif !important;
+    }
+    .reveal h1, .reveal h2, .reveal h3,
+    .reveal .section-divider h2 {
+      font-family: var(--r-heading-font), 'Segoe UI', system-ui, sans-serif !important;
+    }
+    .two-col {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 2.5em;
+      align-items: start; text-align: left;
+    }
+    .three-col {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5em;
+      text-align: center;
+    }
+    .metric-row {
+      display: flex; justify-content: center; gap: 3em;
+      text-align: center; margin: 1.5em 0;
+    }
+    .metric-row > div { flex: 1; }
+    .metric {
+      font-size: 4em; font-weight: 800; line-height: 1.1; display: block;
+    }
+    .metric-label {
+      font-size: 0.45em; text-transform: uppercase; letter-spacing: 0.1em;
+      opacity: 0.7; margin-top: 0.4em; display: block; font-weight: 500;
+    }
+    .card {
+      border-radius: 16px; padding: 1.5em 1.8em; text-align: left;
+    }
+    .card h3 { margin: 0 0 0.4em 0; font-size: 1.1em; }
+    .card p { font-size: 0.95em; line-height: 1.5; margin: 0; }
+    .card i, .card svg {
+      width: 36px; height: 36px; stroke-width: 1.5; margin-bottom: 0.6em;
+    }
+    .icon-feature {
+      display: flex; align-items: flex-start; gap: 1em;
+      margin: 0.7em 0; text-align: left;
+    }
+    .icon-feature i, .icon-feature svg {
+      flex-shrink: 0; width: 32px; height: 32px; stroke-width: 1.5;
+      margin-top: 0.1em;
+    }
+    .icon-feature div strong { display: block; margin-bottom: 0.15em; }
+    .steps {
+      counter-reset: step; list-style: none !important; padding: 0 !important;
+    }
+    .steps li {
+      counter-increment: step; display: flex; align-items: flex-start;
+      gap: 1em; margin: 0.7em 0; padding: 0;
+    }
+    .steps li::before {
+      content: counter(step); display: flex; align-items: center;
+      justify-content: center; min-width: 2em; height: 2em;
+      border-radius: 50%; font-weight: 700; font-size: 0.9em; flex-shrink: 0;
+    }
+    .subtitle {
+      font-size: 1.2em; opacity: 0.7; font-weight: 400; margin-top: 0.3em;
+    }
+    .reveal section.section-divider {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; text-align: center;
+    }
+    .reveal section.section-divider h2 {
+      font-size: 3.5em; margin: 0;
+    }
+    .reveal section.section-divider h2::after { display: none; }
+
+    /* --- Platform Grid (custom layout) --- */
+    .platform-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1em;
+      margin: 1em 0;
+    }
+    .platform-grid .platform-card {
+      border-radius: 14px;
+      padding: 1.2em 1em;
+      text-align: center;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(6px);
+    }
+    .platform-grid .platform-card i,
+    .platform-grid .platform-card svg {
+      width: 28px; height: 28px; stroke-width: 1.5;
+      margin-bottom: 0.3em;
+    }
+    .platform-grid .platform-card span {
+      display: block;
+      font-size: 0.85em;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+
+    /* --- Custom Hybrid Theme: Neo Corporate × Midnight Aurora × Warm Gradient --- */
+    :root {
+      --r-background-color: #0d1b2a;
+      --r-main-color: #d0e8db;
+      --r-heading-color: #00ff88;
+      --r-link-color: #00ff88;
+      --r-heading-font: 'JetBrains Mono', monospace;
+      --r-main-font: 'Space Grotesk', sans-serif;
+      --r-heading-text-transform: uppercase;
+      --r-heading-font-weight: 700;
+      --r-main-font-size: 22px;
+
+      --accent-green: #00ff88;
+      --accent-cyan: #06b6d4;
+      --accent-purple: #a78bfa;
+      --accent-warm: #f59e0b;
+      --accent-terracotta: #ea580c;
+      --bg-deep: #0d1b2a;
+      --bg-purple: #1a0a2e;
+    }
+
+    .reveal {
+      background: linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-purple) 100%);
+    }
+
+    .reveal .slides section {
+      text-align: left;
+      color: #d0e8db;
+      border-left: 3px solid var(--accent-green);
+      padding-left: 0.8em;
+    }
+
+    .reveal h1 {
+      font-size: 2.8em;
+      letter-spacing: 0.04em;
+      background: linear-gradient(135deg, var(--accent-green), var(--accent-cyan), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: 0 0 40px rgba(0,255,136,0.25);
+    }
+
+    .reveal h2 {
+      font-size: 2em;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.5em;
+      background: linear-gradient(135deg, var(--accent-green), var(--accent-cyan), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: 0 0 30px rgba(0,255,136,0.15);
+    }
+
+    .reveal h2::after {
+      content: '';
+      display: block;
+      width: 56px;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent-green), var(--accent-cyan), var(--accent-warm));
+      margin-top: 0.4em;
+    }
+
+    .reveal ul { list-style: none; padding: 0; }
+    .reveal ul li { padding: 0.15em 0; }
+    .reveal ul li::before {
+      content: '> ';
+      color: var(--accent-green);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .reveal .highlight-green { color: var(--accent-green); font-weight: 700; }
+    .reveal .highlight-warm { color: var(--accent-warm); font-weight: 700; }
+    .reveal .highlight-cyan { color: var(--accent-cyan); font-weight: 700; }
+
+    .reveal .metric {
+      color: var(--accent-green);
+      text-shadow: 0 0 30px rgba(0,255,136,0.3);
+    }
+
+    .reveal .card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(8px);
+      color: #d0e8db;
+    }
+    .reveal .card h3 {
+      color: var(--accent-green);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9em;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .reveal .card i, .reveal .card svg { color: var(--accent-cyan); }
+
+    .reveal i, .reveal svg { color: var(--accent-cyan); }
+    .reveal .icon-feature i,
+    .reveal .icon-feature svg { color: var(--accent-cyan); }
+    .reveal .icon-feature div strong { color: var(--accent-green); }
+
+    .reveal .steps li::before {
+      background: linear-gradient(135deg, var(--accent-green), var(--accent-cyan));
+      color: var(--bg-deep);
+      font-family: 'JetBrains Mono', monospace;
+      border: 1px solid rgba(0,255,136,0.3);
+    }
+
+    .reveal h3 {
+      color: #d0e8db;
+      font-size: 1.15em;
+    }
+    .reveal p, .reveal li, .reveal strong, .reveal span { color: inherit; }
+
+    .reveal section.title-slide {
+      border-left: none;
+      text-align: center;
+      background: radial-gradient(ellipse at 50% 30%,
+        rgba(0,255,136,0.08) 0%,
+        rgba(167,139,250,0.06) 40%,
+        transparent 70%);
+    }
+
+    .reveal section.section-divider {
+      border-left: none;
+      background: radial-gradient(ellipse at center,
+        rgba(245,158,11,0.08) 0%,
+        rgba(0,255,136,0.04) 60%,
+        transparent 80%);
+    }
+
+    .reveal .controls button { color: rgba(255,255,255,0.5); }
+    .reveal .progress span { background: var(--accent-green); }
+
+    .reveal .platform-card i,
+    .reveal .platform-card svg { color: var(--accent-warm); }
+    .reveal .platform-card span { color: #d0e8db; }
+
+    .reveal .tagline {
+      font-size: 1.4em;
+      color: rgba(208,232,219,0.7);
+      margin-top: 0.3em;
+      letter-spacing: 0.02em;
+      font-weight: 400;
+    }
+
+    .reveal .accent-bar {
+      width: 80px;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent-green), var(--accent-warm));
+      margin: 0.8em auto;
+      border-radius: 2px;
+    }
+
+    .reveal .cta-text {
+      font-size: 1.6em;
+      font-weight: 600;
+      background: linear-gradient(135deg, var(--accent-green), var(--accent-warm));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .reveal .warm-tag {
+      display: inline-block;
+      background: rgba(245,158,11,0.12);
+      border: 1px solid rgba(245,158,11,0.2);
+      border-radius: 6px;
+      padding: 0.15em 0.6em;
+      color: var(--accent-warm);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75em;
+      letter-spacing: 0.04em;
+    }
+
+    /* Warm accent on alternate cards for texture */
+    .reveal .card.warm-accent {
+      border-color: rgba(245,158,11,0.15);
+      background: rgba(245,158,11,0.03);
+    }
+    .reveal .card.warm-accent h3 {
+      background: linear-gradient(135deg, var(--accent-warm), var(--accent-terracotta));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .reveal .card.warm-accent i,
+    .reveal .card.warm-accent svg { color: var(--accent-warm); }
+  </style>
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+      <!-- SLIDE 1: Title -->
+      <section class="title-slide" data-auto-animate>
+        <div style="margin-bottom: 0.2em;">
+          <span style="font-size: 0.5em; font-family: 'JetBrains Mono', monospace; color: #00ff88; letter-spacing: 0.15em; opacity: 0.6;">CHROME EXTENSION</span>
+        </div>
+        <h1 style="font-size: 3.8em; margin-bottom: 0.1em;">CONTEXT RELAY</h1>
+        <div class="accent-bar"></div>
+        <p class="tagline">Define once. Relay everywhere.</p>
+        <p style="font-size: 0.55em; margin-top: 2em; opacity: 0.5; font-family: 'JetBrains Mono', monospace;">
+          HACKATHON 2025
+        </p>
+      </section>
+
+      <!-- SLIDE 2: Problem -->
+      <section data-auto-animate>
+        <span class="warm-tag" style="margin-bottom: 0.6em; display: inline-block;">THE PAIN</span>
+        <h2>Context Breaks Every Time You Switch</h2>
+        <div class="two-col" style="margin-top: 0.5em;">
+          <div>
+            <p style="font-size: 0.95em; line-height: 1.6; opacity: 0.85;">
+              Knowledge workers juggle <span class="highlight-green">6+ AI tools</span> daily.<br>
+              Every switch means re-explaining:
+            </p>
+            <ul style="margin-top: 0.6em;">
+              <li>What you're building</li>
+              <li>Key decisions already made</li>
+              <li>Current blockers and state</li>
+              <li>Codebase structure &amp; conventions</li>
+            </ul>
+          </div>
+          <div>
+            <div class="card" style="text-align: left;">
+              <i data-lucide="clock" style="width: 28px; height: 28px;"></i>
+              <h3 style="font-size: 0.85em; margin-bottom: 0.3em;">THE COST</h3>
+              <p style="font-size: 1.1em; font-weight: 600; color: var(--accent-warm);">
+                ~15 mins lost per switch
+              </p>
+              <p style="font-size: 0.85em; opacity: 0.7; margin-top: 0.3em;">
+                Multiplied across every AI tool,<br>
+                every session, every day.
+              </p>
+              <p style="font-size: 0.85em; opacity: 0.7; margin-top: 0.3em;">
+                <span class="highlight-warm">Friction kills momentum.</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 3: Solution -->
+      <section data-auto-animate>
+        <span class="warm-tag" style="margin-bottom: 0.6em; display: inline-block;">THE FIX</span>
+        <h2>One Context. Every AI.</h2>
+        <div style="display: flex; align-items: center; gap: 2em; margin-top: 0.3em;">
+          <div style="flex: 1;">
+            <p style="font-size: 1.1em; line-height: 1.5; opacity: 0.85;">
+              <span class="highlight-green">Context Relay</span> is a Chrome extension that lets you
+              define your project context once, generate a structured
+              <span class="highlight-cyan">"primer"</span>, and inject it into
+              any AI chat with a single click.
+            </p>
+            <div class="icon-feature" style="margin-top: 1em;">
+              <i data-lucide="check-circle"></i>
+              <div>
+                <strong>Zero re-typing</strong><br>
+                <span style="opacity: 0.7;">Your context follows you across platforms</span>
+              </div>
+            </div>
+            <div class="icon-feature">
+              <i data-lucide="zap"></i>
+              <div>
+                <strong>One-click relay</strong><br>
+                <span style="opacity: 0.7;">Floating button injects context instantly</span>
+              </div>
+            </div>
+            <div class="icon-feature">
+              <i data-lucide="lock"></i>
+              <div>
+                <strong>Privacy-first</strong><br>
+                <span style="opacity: 0.7;">All data stays in chrome.storage.local</span>
+              </div>
+            </div>
+          </div>
+          <div style="flex: 0 0 auto;">
+            <div class="card warm-accent" style="text-align: center; padding: 2em 1.5em;">
+              <i data-lucide="repeat-2" style="width: 48px; height: 48px; margin-bottom: 0.5em;"></i>
+              <p style="font-size: 1em; font-weight: 600; color: var(--accent-warm);">
+                Define Once<br>
+                <span style="font-size: 1.5em; color: var(--accent-green);">→</span><br>
+                Relay Everywhere
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 4: How It Works -->
+      <section>
+        <span class="warm-tag" style="margin-bottom: 0.6em; display: inline-block;">4 STEPS</span>
+        <h2>How It Works</h2>
+        <ol class="steps" style="margin-top: 0.3em;">
+          <li>
+            <div>
+              <strong style="color: var(--accent-green);">CREATE</strong><br>
+              <span style="opacity: 0.75;">Define a project with task, decisions, links, notes, and tags</span>
+            </div>
+          </li>
+          <li>
+            <div>
+              <strong style="color: var(--accent-cyan);">GENERATE</strong><br>
+              <span style="opacity: 0.75;">Click "Generate Primer" to produce a structured context document</span>
+            </div>
+          </li>
+          <li>
+            <div>
+              <strong style="color: var(--accent-purple);">RELAY</strong><br>
+              <span style="opacity: 0.75;">Go to any AI chat → click the floating Relay button → select project</span>
+            </div>
+          </li>
+          <li>
+            <div>
+              <strong style="color: var(--accent-warm);">DONE</strong><br>
+              <span style="opacity: 0.75;">The AI has full context. No re-explaining. Start building.</span>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <!-- SLIDE 5: Key Features -->
+      <section>
+        <span class="warm-tag" style="margin-bottom: 0.6em; display: inline-block;">CAPABILITIES</span>
+        <h2>Key Features</h2>
+        <div class="three-col" style="margin-top: 0.3em;">
+          <div class="card">
+            <i data-lucide="folder-kanban"></i>
+            <h3>Project Hub</h3>
+            <p>Create and manage projects with tasks, decisions, links, notes, and tags — everything in one place.</p>
+          </div>
+          <div class="card warm-accent">
+            <i data-lucide="file-text"></i>
+            <h3>Primer Engine</h3>
+            <p>Generate structured context documents from your project data. Templates for common project types.</p>
+          </div>
+          <div class="card">
+            <i data-lucide="send"></i>
+            <h3>One-Click Relay</h3>
+            <p>Inject primers into ChatGPT, Claude, Gemini, Perplexity, Grok, and Mistral — with one click.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 6: Platforms -->
+      <section>
+        <span class="warm-tag" style="margin-bottom: 0.6em; display: inline-block;">CROSS-PLATFORM</span>
+        <h2>Works Across 6 AI Platforms</h2>
+        <p style="opacity: 0.7; margin-bottom: 0.8em;">Not locked into a single ecosystem. Your context follows you.</p>
+        <div class="platform-grid">
+          <div class="platform-card">
+            <i data-lucide="message-square"></i>
+            <span>ChatGPT</span>
+          </div>
+          <div class="platform-card">
+            <i data-lucide="bot"></i>
+            <span>Claude</span>
+          </div>
+          <div class="platform-card">
+            <i data-lucide="sparkles"></i>
+            <span>Gemini</span>
+          </div>
+          <div class="platform-card">
+            <i data-lucide="search"></i>
+            <span>Perplexity</span>
+          </div>
+          <div class="platform-card">
+            <i data-lucide="zap"></i>
+            <span>Grok</span>
+          </div>
+          <div class="platform-card">
+            <i data-lucide="wind"></i>
+            <span>Mistral</span>
+          </div>
+        </div>
+        <p style="margin-top: 0.8em; font-size: 0.85em; opacity: 0.6; font-family: 'JetBrains Mono', monospace;">
+          + MORE COMING SOON
+        </p>
+      </section>
+
+      <!-- SLIDE 7: What Makes It Special -->
+      <section>
+        <span class="warm-tag" style="margin-bottom: 0.6em; display: inline-block;">WHY IT WINS</span>
+        <h2>What Makes It Special</h2>
+        <div style="display: flex; gap: 2em; margin-top: 0.3em;">
+          <div style="flex: 1;">
+            <div class="icon-feature">
+              <i data-lucide="globe"></i>
+              <div>
+                <strong>Works Everywhere</strong><br>
+                <span style="opacity: 0.7;">Not locked to one AI — covers 6 platforms and growing</span>
+              </div>
+            </div>
+            <div class="icon-feature">
+              <i data-lucide="plug"></i>
+              <div>
+                <strong>Zero Setup</strong><br>
+                <span style="opacity: 0.7;">Install the extension, create a project, start relaying</span>
+              </div>
+            </div>
+            <div class="icon-feature">
+              <i data-lucide="shield"></i>
+              <div>
+                <strong>Privacy-First</strong><br>
+                <span style="opacity: 0.7;">All data lives in chrome.storage — no servers, no accounts</span>
+              </div>
+            </div>
+          </div>
+          <div style="flex: 1;">
+            <div class="icon-feature">
+              <i data-lucide="template"></i>
+              <div>
+                <strong>Template Library</strong><br>
+                <span style="opacity: 0.7;">Quick-start with templates for common project archetypes</span>
+              </div>
+            </div>
+            <div class="icon-feature">
+              <i data-lucide="search"></i>
+              <div>
+                <strong>Full-Text Search</strong><br>
+                <span style="opacity: 0.7;">Search across all your primers and projects instantly</span>
+              </div>
+            </div>
+            <div class="icon-feature">
+              <i data-lucide="download"></i>
+              <div>
+                <strong>Export Anywhere</strong><br>
+                <span style="opacity: 0.7;">Export primers as Markdown or JSON — portable and open</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 8: Tech Stack -->
+      <section>
+        <span class="warm-tag" style="margin-bottom: 0.6em; display: inline-block;">BUILT WITH</span>
+        <h2>Tech Stack</h2>
+        <div style="display: flex; justify-content: center; gap: 2em; margin-top: 0.5em;">
+          <div class="card" style="text-align: center; padding: 1.2em 2em;">
+            <i data-lucide="atom" style="width: 32px; height: 32px;"></i>
+            <h3 style="font-size: 0.8em; margin-top: 0.3em;">React 18</h3>
+            <p style="font-size: 0.75em; opacity: 0.6;">TypeScript + TailwindCSS v4</p>
+          </div>
+          <div class="card warm-accent" style="text-align: center; padding: 1.2em 2em;">
+            <i data-lucide="puzzle" style="width: 32px; height: 32px;"></i>
+            <h3 style="font-size: 0.8em; margin-top: 0.3em;">MV3 Extension</h3>
+            <p style="font-size: 0.75em; opacity: 0.6;">Chrome Manifest V3</p>
+          </div>
+          <div class="card" style="text-align: center; padding: 1.2em 2em;">
+            <i data-lucide="hard-drive" style="width: 32px; height: 32px;"></i>
+            <h3 style="font-size: 0.8em; margin-top: 0.3em;">chrome.storage</h3>
+            <p style="font-size: 0.75em; opacity: 0.6;">Privacy-first local storage</p>
+          </div>
+          <div class="card warm-accent" style="text-align: center; padding: 1.2em 2em;">
+            <i data-lucide="zap" style="width: 32px; height: 32px;"></i>
+            <h3 style="font-size: 0.8em; margin-top: 0.3em;">Vite</h3>
+            <p style="font-size: 0.75em; opacity: 0.6;">Multi-entry build system</p>
+          </div>
+        </div>
+        <div style="text-align: center; margin-top: 1em;">
+          <p style="font-size: 0.85em; opacity: 0.6; font-family: 'JetBrains Mono', monospace;">
+            CHROME.STORAGE.LOCAL — NO SERVERS · NO ACCOUNTS · NO TRACKING
+          </p>
+        </div>
+      </section>
+
+      <!-- SLIDE 9: Section Divider — Vision -->
+      <section class="section-divider" data-transition="zoom">
+        <h2>THE FUTURE</h2>
+        <div class="accent-bar" style="width: 120px;"></div>
+        <p style="font-size: 1.1em; opacity: 0.7; margin-top: 0.5em;">
+          From 6 platforms → every AI interface.
+        </p>
+        <p style="font-size: 1.1em; opacity: 0.7;">
+          From manual → auto-detect &amp; relay context intelligently.
+        </p>
+      </section>
+
+      <!-- SLIDE 10: Vision / Future -->
+      <section>
+        <span class="warm-tag" style="margin-bottom: 0.6em; display: inline-block;">ROADMAP</span>
+        <h2>Where We're Going</h2>
+        <div class="two-col">
+          <div>
+            <h3 style="color: var(--accent-green); font-family: 'JetBrains Mono', monospace; font-size: 0.9em; letter-spacing: 0.05em;">NOW</h3>
+            <ul>
+              <li>6 AI platforms supported</li>
+              <li>Project management &amp; primers</li>
+              <li>Full-text search &amp; export</li>
+              <li>Template library</li>
+            </ul>
+          </div>
+          <div>
+            <h3 style="color: var(--accent-warm); font-family: 'JetBrains Mono', monospace; font-size: 0.9em; letter-spacing: 0.05em;">NEXT</h3>
+            <ul>
+              <li>Auto-context: detect &amp; relay intelligently</li>
+              <li>Team sharing &amp; workspaces</li>
+              <li>Custom template builder</li>
+              <li>AI-generated primer summaries</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card" style="text-align: center; margin-top: 0.8em; padding: 1em;">
+          <p style="font-size: 0.9em; opacity: 0.8;">
+            <span style="color: var(--accent-green); font-weight: 700;">Built.</span>
+            <span style="opacity: 0.4;"> | </span>
+            <span style="color: var(--accent-cyan); font-weight: 700;">Working.</span>
+            <span style="opacity: 0.4;"> | </span>
+            <span style="color: var(--accent-warm); font-weight: 700;">Ready to ship.</span>
+          </p>
+        </div>
+      </section>
+
+      <!-- SLIDE 11: Thank You / CTA -->
+      <section class="title-slide" data-transition="fade">
+        <div style="margin-bottom: 0.5em;">
+          <i data-lucide="repeat-2" style="width: 64px; height: 64px; color: var(--accent-green);"></i>
+        </div>
+        <h1 style="font-size: 2.8em; margin-bottom: 0.1em;">THANK YOU</h1>
+        <div class="accent-bar"></div>
+        <p class="tagline" style="font-size: 1.2em;">
+          <span class="highlight-green">Context Relay</span> — Define once. Relay everywhere.
+        </p>
+        <p style="margin-top: 1.5em; font-size: 0.85em; opacity: 0.6; font-family: 'JetBrains Mono', monospace;">
+          BUILT FOR THE HACKATHON · PRIVACY-FIRST · OPEN EXTENSIBLE
+        </p>
+      </section>
+
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    Reveal.initialize({
+      width: 960,
+      height: 540,
+      margin: 0.04,
+      minScale: 0.2,
+      maxScale: 3.0,
+      hash: true,
+      transition: 'fade',
+      transitionSpeed: 'default',
+      autoAnimateEasing: 'ease-out',
+      autoAnimateDuration: 0.8,
+      controls: true,
+      progress: true,
+      center: true,
+    });
+    lucide.createIcons();
+  </script>
+</body>
+</html>

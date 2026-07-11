@@ -12,6 +12,7 @@
   --color-accent-hover: oklch(0.453 0.162 262.7);
   --color-accent-light: oklch(0.93 0.034 255.4);
   --color-destructive: oklch(0.577 0.215 27.33);
+  --color-success: oklch(0.576 0.179 147.6);
   --color-card: oklch(1 0 0);
   --color-card-hover: oklch(0.98 0 0);
 
@@ -29,6 +30,7 @@
   --color-accent-hover: oklch(0.64 0.16 260);
   --color-accent-light: oklch(0.26 0.08 260);
   --color-destructive: oklch(0.577 0.215 27.33);
+  --color-success: oklch(0.6 0.18 147.6);
   --color-card: oklch(0.18 0 0);
   --color-card-hover: oklch(0.22 0 0);
 }

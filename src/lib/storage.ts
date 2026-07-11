@@ -1,5 +1,20 @@
 import type { Project, Primer } from "../types";
 import { SAMPLE_PROJECTS, SAMPLE_PRIMERS } from "./sample-data";
+import type { User } from "@supabase/supabase-js";
+import {
+  syncProjectToCloud,
+  syncPrimerToCloud,
+  deleteProjectFromCloud,
+} from "./sync";
+
+// Track current user for auto-sync (set by AuthContext)
+let _currentUser: User | null = null;
+export function setSyncUser(user: User | null) {
+  _currentUser = user;
+}
+export function getSyncUser(): User | null {
+  return _currentUser;
+}
 
 const PROJECTS_KEY = "context-relay-projects";
 const PRIMERS_KEY = "context-relay-primers";
@@ -29,9 +44,9 @@ function setInChrome(key: string, value: unknown): Promise<void> {
   });
 }
 
-// --- Unified read/write with caching ---
+// --- Unified read/write with caching (exported for sync) ---
 
-async function readFromStorage<T>(key: string): Promise<T[]> {
+export async function readFromStorage<T>(key: string): Promise<T[]> {
   if (isExtensionContext()) {
     const data = await getFromChrome<T[]>(key);
     return data ?? [];
@@ -44,7 +59,7 @@ async function readFromStorage<T>(key: string): Promise<T[]> {
   }
 }
 
-async function writeToStorage<T>(key: string, value: T[]): Promise<void> {
+export async function writeToStorage<T>(key: string, value: T[]): Promise<void> {
   if (isExtensionContext()) {
     await setInChrome(key, value);
   } else {
@@ -106,6 +121,10 @@ export async function saveProject(project: Project): Promise<void> {
   }
   cachedProjects = projects;
   await writeToStorage(PROJECTS_KEY, projects);
+  // Auto-sync to cloud
+  if (_currentUser) {
+    syncProjectToCloud(project, _currentUser).catch(console.error);
+  }
 }
 
 export async function deleteProject(id: string): Promise<void> {
@@ -118,6 +137,10 @@ export async function deleteProject(id: string): Promise<void> {
   const filteredPrimers = primers.filter((p) => p.projectId !== id);
   cachedPrimers = filteredPrimers;
   await writeToStorage(PRIMERS_KEY, filteredPrimers);
+  // Auto-sync to cloud
+  if (_currentUser) {
+    deleteProjectFromCloud(id, _currentUser).catch(console.error);
+  }
 }
 
 // --- Primers ---
@@ -141,4 +164,8 @@ export async function savePrimer(primer: Primer): Promise<void> {
   primers.push(primer);
   cachedPrimers = primers;
   await writeToStorage(PRIMERS_KEY, primers);
+  // Auto-sync to cloud
+  if (_currentUser) {
+    syncPrimerToCloud(primer, _currentUser).catch(console.error);
+  }
 }
