@@ -11,7 +11,8 @@
     <a href="#architecture">Architecture</a> •
     <a href="#installation">Installation</a> •
     <a href="#usage">Usage</a> •
-    <a href="#development">Development</a>
+    <a href="#development">Development</a> •
+    <a href="docs/ARCHITECTURE.md">Full Docs</a>
   </p>
 
   <p>
@@ -233,7 +234,7 @@ Open `http://localhost:5173` — sample data is loaded automatically for testing
 
 1. Create a content script in `src/content-scripts/<platform>.ts`
 2. Register it in `manifest.json` under `content_scripts`
-3. Add it to the rollup inputs in `vite.config.ts`
+3. Add it to the platforms array in `scripts/build-content-scripts.js`
 4. Add the site's hostname and selectors to `src/lib/constants.ts`
 
 ### Code Quality
@@ -245,15 +246,24 @@ Open `http://localhost:5173` — sample data is loaded automatically for testing
 
 ---
 
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Full system architecture and data flow |
+| [DEVELOPMENT.md](docs/DEVELOPMENT.md) | Dev setup, debugging, and workflow |
+| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Deploy the extension and backend |
+| [API.md](docs/API.md) | API reference and message types |
+| [PRIVACY.md](PRIVACY.md) | Privacy policy and data handling |
+| [SECURITY.md](SECURITY.md) | Security policy and reporting |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution guidelines |
+| [CHANGELOG.md](CHANGELOG.md) | Version history |
+
+---
+
 ## Contributing
 
-Contributions are welcome. Please open an issue first to discuss your proposed changes.
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Commit your changes
-4. Push to the branch
-5. Open a Pull Request
+Contributions are welcome. Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ---
 
