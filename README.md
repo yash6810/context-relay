@@ -36,17 +36,21 @@ Context Relay is a browser extension that eliminates the friction of switching b
 - Search, tag filtering, and sort controls on the dashboard
 - Edit and evolve context as your project progresses
 
-### Primer Generation
+### Primer Generation (Agentic Pipeline)
 - Generate structured, formatted primers from your project data
-- **Hybrid routing pipeline** — each generation passes through a lightweight local pre-check before deciding on the processing path:
-  - **Local (green badge):** If the AI backend is unreachable or the context is short/unchanged, the primer is formatted entirely on-device via markdown compression
-  - **Cloud (indigo badge):** For longer or substantially changed context, the project data is sent to Fireworks AI's GPT-OSS 120B model for intelligent summarization; previous primer content is included as additional context
-- Every primer records its routing origin (`local` or `cloud`) and model used, visible as an inline badge on history cards
-- Automatic version history with timestamps
-- Expandable cards for reading full primers
-- One-click copy to clipboard
+- **Agentic Pipeline** — each generation passes through a 3-step pipeline powered by AMD hardware and Gemma models:
+  - **RETRIEVE:** Embedded chunks are ranked via Cosine Similarity against your current task.
+  - **PLAN:** A Gemma 3 27B model acts as an orchestrator, evaluating all chunks and filtering out noise.
+  - **SYNTHESIZE:** The curated chunks are passed to a lightweight, blazing-fast local model (Gemma 2 9B) to write the final structured markdown primer.
+- **Server-Sent Events (SSE)** — Watch the Agentic Pipeline think in real-time with a live progress stepper in the UI.
+- Every primer records its routing origin (`local` or `cloud`) and model used, visible as an inline badge on history cards.
 
-### Cross-Platform Relay
+### Cross-Platform Relay & Smart Context
+- **Auto-Scrape Context:** Right-click any webpage to instantly extract readability-style text and auto-populate a new project.
+- **Context Drift Detector:** When typing in any AI chat, the extension passively compares your prompt against the injected primer. If your prompt completely diverges, it shows a UI warning to generate a new primer!
+- **Resume-Where-I-Left-Off:** The Dashboard detects your active browser tab and auto-sorts matching projects to the top of the list.
+- **Token / Cost Dashboard:** Track exactly how many tokens and cloud API dollars you saved by utilizing the local AMD ROCm fallback!
+
 Floating relay buttons injected directly into six major AI platforms:
 
 | Platform | URL | Status |
@@ -143,7 +147,15 @@ src/
 
 ## AMD & Infrastructure Usage
 
-Context Relay's compression pipeline runs on GPT-OSS 120B, served through the Fireworks AI API — the compute infrastructure provided for this hackathon, hosted on AMD hardware. The backend is containerized with Docker and deployed as a standalone FastAPI service on Render.
+Context Relay is highly optimized for the **AMD Developer Hackathon: ACT II**. 
+
+### How it utilizes the stack:
+- **AMD Developer Cloud (ROCm):** The fast generative tier (`google/gemma-2-9b-it`) and embedding models (`BAAI/bge-large-en-v1.5`) are hosted on AMD Instinct GPUs using **vLLM** and **Text Embeddings Inference (TEI)**. 
+- **Fireworks AI & Gemma Models:** A Fireworks AI API (`accounts/fireworks/models/gemma-3-27b-it`) acts as the "Planner" orchestrator in the Agentic Pipeline.
+- **Intelligent Routing:** The backend seamlessly routes between the local AMD tier and the cloud tier depending on workload complexity, generating huge cost savings (trackable in the extension's dashboard).
+
+### Contributors
+- **vivekisadev** - Architected and engineered the Agentic Pipeline (Retrieve, Plan, Synthesize), AMD Developer Cloud integration, Gemma model support, Auto-Scrape, Context Drift detection, and the Token Savings dashboard.
 
 ---
 
