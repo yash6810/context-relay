@@ -7,6 +7,8 @@ import { ensureSampleData } from "./lib/storage";
 import "./index.css";
 import App from "./App";
 
+import { Preloader } from "./components/Preloader";
+
 function Root() {
   useEffect(() => {
     ensureSampleData();
@@ -14,13 +16,15 @@ function Root() {
 
   return (
     <StrictMode>
-      <MemoryRouter>
-        <ThemeProvider>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </ThemeProvider>
-      </MemoryRouter>
+      <Preloader>
+        <MemoryRouter>
+          <ThemeProvider>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </ThemeProvider>
+        </MemoryRouter>
+      </Preloader>
     </StrictMode>
   );
 }

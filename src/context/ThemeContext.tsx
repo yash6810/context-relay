@@ -19,6 +19,11 @@ function getInitialTheme(): Theme {
   } catch {
     // ignore
   }
+  
+  // Check system preference
+  if (typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+    return "dark";
+  }
   return "light";
 }
 
