@@ -1,28 +1,34 @@
 import { initRelay } from "./shared";
 
 function captureConversation(): string {
+  // 1. If the user highlighted specific text, ONLY capture that!
+  const selection = window.getSelection()?.toString().trim();
+  if (selection && selection.length > 10) {
+    return `## Selected Context\n${selection}`;
+  }
+
   const parts: string[] = [];
 
   // ChatGPT: messages have data-message-author-role attribute, or article tags
-  let messageContainers = document.querySelectorAll<HTMLElement>(
+  let messageContainers = Array.from(document.querySelectorAll<HTMLElement>(
     '[data-message-author-role="user"], [data-message-author-role="assistant"], article'
-  );
+  ));
+
+  // Use a Set to avoid duplicating articles if they matched both selectors
+  const uniqueContainers = Array.from(new Set(messageContainers));
+
+  // 2. Only take the last 6 messages (approx 3 recent turns) to avoid old context
+  const recentContainers = uniqueContainers.slice(-6);
 
   // Fallback if ChatGPT changed their entire DOM structure
-  if (messageContainers.length === 0) {
+  if (recentContainers.length === 0) {
     const mainText = document.querySelector('main')?.innerText || document.body.innerText || "";
     if (mainText.length > 50) {
-      return `## Conversation\n\n${mainText}`;
+      return `## Conversation\n\n${mainText.slice(-3000)}`;
     }
   }
 
-  // Use a Set to avoid duplicating articles if they matched both selectors
-  const processed = new Set<HTMLElement>();
-
-  messageContainers.forEach((container) => {
-    if (processed.has(container)) return;
-    processed.add(container);
-
+  recentContainers.forEach((container) => {
     const role = container.getAttribute("data-message-author-role");
     let label = role === "user" ? "You" : "Assistant";
     
