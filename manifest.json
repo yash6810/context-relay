@@ -71,14 +71,5 @@
     "16": "icons/icon16.svg",
     "48": "icons/icon48.svg",
     "128": "icons/icon128.svg"
-  },
-  "browser_specific_settings": {
-    "gecko": {
-      "id": "context-relay@nativelyai.app",
-      "strict_min_version": "109.0"
-    },
-    "edge": {
-      "browser_action_next_to_addressbar": true
-    }
   }
 }

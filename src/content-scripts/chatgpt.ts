@@ -3,17 +3,37 @@ import { initRelay } from "./shared";
 function captureConversation(): string {
   const parts: string[] = [];
 
-  // ChatGPT: messages have data-message-author-role attribute
-  const messageContainers = document.querySelectorAll<HTMLElement>(
-    '[data-message-author-role="user"], [data-message-author-role="assistant"]'
+  // ChatGPT: messages have data-message-author-role attribute, or article tags
+  let messageContainers = document.querySelectorAll<HTMLElement>(
+    '[data-message-author-role="user"], [data-message-author-role="assistant"], article'
   );
 
+  // Fallback if ChatGPT changed their entire DOM structure
+  if (messageContainers.length === 0) {
+    const mainText = document.querySelector('main')?.innerText || document.body.innerText || "";
+    if (mainText.length > 50) {
+      return `## Conversation\n\n${mainText}`;
+    }
+  }
+
+  // Use a Set to avoid duplicating articles if they matched both selectors
+  const processed = new Set<HTMLElement>();
+
   messageContainers.forEach((container) => {
+    if (processed.has(container)) return;
+    processed.add(container);
+
     const role = container.getAttribute("data-message-author-role");
-    const label = role === "user" ? "You" : "Assistant";
+    let label = role === "user" ? "You" : "Assistant";
+    
+    // If using <article>, infer role from text or avatar
+    if (!role && container.tagName.toLowerCase() === 'article') {
+       const text = container.innerText || "";
+       if (text.startsWith("You\n")) label = "You";
+       else label = "Assistant";
+    }
 
     // Get all text content from the message body
-    // ChatGPT v2 uses article > div for message content
     const textEls = container.querySelectorAll(
       ".markdown, .whitespace-pre-wrap, [data-message-content]"
     );
