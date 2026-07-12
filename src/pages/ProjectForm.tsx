@@ -27,6 +27,15 @@ export default function ProjectForm() {
   const [tagsStr, setTagsStr] = useState("");
   const [errors, setErrors] = useState<{ name?: string; currentTask?: string }>({});
   const [loading, setLoading] = useState(isEdit);
+  const [showReminder, setShowReminder] = useState(false);
+
+  // 20-second save reminder
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowReminder(true);
+    }, 20000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Load template from navigation state or existing project
   useEffect(() => {
@@ -260,6 +269,23 @@ export default function ProjectForm() {
           </button>
         </div>
       </form>
+
+      {showReminder && (
+        <div className="fixed bottom-4 right-4 max-w-sm bg-card border border-border rounded-xl shadow-lg p-4 z-50 transition-all duration-300">
+          <div className="flex items-start gap-3">
+            <div className="text-warning shrink-0 mt-0.5">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+            </div>
+            <div className="flex-1">
+              <h4 className="font-semibold text-sm text-fg">Don't forget to save!</h4>
+              <p className="text-xs text-muted-fg mt-1">You've been editing this context for a while. Make sure to save it so you don't lose your work.</p>
+            </div>
+            <button onClick={() => setShowReminder(false)} className="text-muted-fg hover:text-fg p-1 shrink-0 cursor-pointer rounded hover:bg-muted transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

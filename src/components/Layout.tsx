@@ -9,7 +9,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   const location = useLocation();
 
   return (
-    <div className="min-h-screen bg-bg text-fg transition-colors duration-200">
+    <div className="min-h-screen flex flex-col bg-bg text-fg transition-colors duration-200">
       {/* Fixed Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-bg/80 backdrop-blur-md border-b border-border transition-colors duration-200">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 h-14 flex items-center justify-between">
@@ -133,11 +133,18 @@ export default function Layout({ children }: { children: ReactNode }) {
       </header>
 
       {/* Main content area */}
-      <main className="pt-14 min-h-screen">
+      <main className="pt-14 flex-1">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 py-8 sm:py-12">
           {children}
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-border mt-auto py-6">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 text-center text-xs text-muted-fg">
+          &copy; {new Date().getFullYear()} Context Relay. All rights reserved.
+        </div>
+      </footer>
     </div>
   );
 }

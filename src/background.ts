@@ -95,6 +95,19 @@ chrome.runtime.onMessage.addListener(
 
 async function handleMessage(message: { type: string; payload?: unknown }) {
   switch (message.type) {
+    case "GET_STATS": {
+      const allPrimers = await getPrimers();
+      let savedTokens = 0;
+      let localRuns = 0;
+      allPrimers.forEach(p => {
+        if (p.routing !== 'cloud') {
+          localRuns++;
+          savedTokens += Math.ceil(p.content.length / 4);
+        }
+      });
+      const savedCost = (savedTokens / 1000000) * 0.20;
+      return { savedTokens, savedCost, localRuns };
+    }
     case "GET_PROJECTS": {
       const projects = await getProjects();
       return { projects };

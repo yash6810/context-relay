@@ -65,6 +65,11 @@
       "matches": ["https://chat.mistral.ai/*"],
       "js": ["scripts/content-mistral.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["scripts/content-bridge.js"],
+      "run_at": "document_start"
     }
   ],
   "icons": {

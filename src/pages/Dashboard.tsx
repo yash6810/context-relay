@@ -171,21 +171,33 @@ export default function Dashboard() {
         )
       );
       
-      // Calculate AMD stats
+      // Calculate local stats first as fallback
       let savedTokens = 0;
       let localRuns = 0;
       allPrimers.forEach(p => {
-        // Assume primers without routing flag are 'local' by default (v1)
-        // or explicitly tagged as 'local'
         if (p.routing !== 'cloud') {
           localRuns++;
-          // Rough token estimation
           savedTokens += Math.ceil(p.content.length / 4);
         }
       });
-      // Fireworks pricing: e.g. Llama-3 8B is ~$0.20 per 1M tokens
       const savedCost = (savedTokens / 1000000) * 0.20;
       setStats({ savedTokens, savedCost, localRuns });
+
+      // Try to fetch real stats from extension via bridge if not in extension context
+      if (typeof chrome === 'undefined' || !chrome.storage?.local) {
+        const requestId = Math.random().toString();
+        const handleMessage = (e: MessageEvent) => {
+          if (e.data?.type === "CONTEXT_RELAY_BRIDGE_RESPONSE" && e.data?.id === requestId) {
+            if (e.data.payload) {
+              setStats(e.data.payload);
+            }
+            window.removeEventListener("message", handleMessage);
+          }
+        };
+        window.addEventListener("message", handleMessage);
+        window.postMessage({ type: "CONTEXT_RELAY_BRIDGE_REQUEST", id: requestId, payload: { type: "GET_STATS" } }, "*");
+        setTimeout(() => window.removeEventListener("message", handleMessage), 1000);
+      }
       
       setLoading(false);
     });
