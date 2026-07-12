@@ -928,11 +928,12 @@ function renderPrimersView() {
 }
 
 function injectIntoChat(text: string): boolean {
+  // Ordered by specificity
   const selectors = [
     "#prompt-textarea", // ChatGPT
     ".ProseMirror", // Claude
+    "textarea", // General textareas (Perplexity, etc.)
     '[contenteditable="true"]',
-    "textarea",
     '[role="textbox"]',
   ];
 
@@ -940,16 +941,24 @@ function injectIntoChat(text: string): boolean {
     const elements = document.querySelectorAll(sel);
     for (const elNode of elements) {
       const el = elNode as HTMLTextAreaElement | HTMLInputElement | HTMLElement;
+      
       // Skip hidden or tiny elements
       if (el.offsetHeight === 0 && el.offsetWidth === 0) continue;
+      
       // Skip elements that are clearly not the main chat input
-      if (el.tagName !== "TEXTAREA" && el.tagName !== "INPUT" && el.getAttribute("contenteditable") !== "true" && el.getAttribute("role") !== "textbox" && !el.classList.contains("ProseMirror")) continue;
+      if (el.tagName !== "TEXTAREA" && el.tagName !== "INPUT" && 
+          el.getAttribute("contenteditable") !== "true" && 
+          el.getAttribute("role") !== "textbox" && 
+          !el.classList.contains("ProseMirror")) {
+        continue;
+      }
 
       try {
         el.focus();
         
-        // Try React native value setter for textarea/input
+        // --- TEXTAREA / INPUT (e.g. Perplexity) ---
         if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
+          // React/Vue/Angular hack for native inputs
           const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
             window.HTMLTextAreaElement.prototype,
             "value"
@@ -963,50 +972,51 @@ function injectIntoChat(text: string): boolean {
           } else {
             el.value = text;
           }
-          el.dispatchEvent(new Event("input", { bubbles: true }));
-          el.dispatchEvent(new Event("change", { bubbles: true }));
           
-          if (el.value.includes(text.slice(0, 10))) return true;
-        } else {
-          // Contenteditable (ProseMirror, Draft.js, Lexical)
+          // Dispatch composed events for modern frameworks (like SolidJS or ShadowDOMs)
+          el.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+          el.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
           
-          // Ensure cursor is inside the element for execCommand to work
+          // Simulate a keypress to trigger any listeners waiting for typing (Perplexity often needs this)
+          el.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true, composed: true }));
+          el.dispatchEvent(new KeyboardEvent("keyup", { key: " ", bubbles: true, composed: true }));
+          
+          return true; // Successfully injected
+        } 
+        // --- CONTENTEDITABLE (e.g. ChatGPT, Claude) ---
+        else {
           const selection = window.getSelection();
           if (selection) {
             const range = document.createRange();
             range.selectNodeContents(el);
-            range.collapse(false);
+            range.collapse(false); // move to end
             selection.removeAllRanges();
             selection.addRange(range);
           }
 
-          // 1. Dispatch paste event
-          const dataTransfer = new DataTransfer();
-          dataTransfer.setData("text/plain", text);
-          const pasteEvent = new ClipboardEvent("paste", {
-            clipboardData: dataTransfer,
-            bubbles: true,
-            cancelable: true,
-          });
-          el.dispatchEvent(pasteEvent);
-
-          // 2. Fallback to execCommand if paste wasn't handled or didn't insert text
-          if (!el.textContent?.includes(text.slice(0, 10))) {
-            document.execCommand("insertText", false, text);
-          }
+          // Using execCommand is the only safe way to interact with Lexical/ProseMirror (ChatGPT/Claude)
+          // Doing el.textContent = text destroys their internal paragraph nodes and breaks the UI!
+          const success = document.execCommand("insertText", false, text);
           
-          // 3. Last resort
-          if (!el.textContent?.includes(text.slice(0, 10))) {
-            el.textContent = text;
+          if (!success) {
+            // Fallback for some browsers if insertText fails
+            const dataTransfer = new DataTransfer();
+            dataTransfer.setData("text/plain", text);
+            el.dispatchEvent(new ClipboardEvent("paste", {
+              clipboardData: dataTransfer,
+              bubbles: true,
+              cancelable: true,
+              composed: true,
+            }));
           }
 
-          el.dispatchEvent(new Event("input", { bubbles: true }));
+          el.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+          el.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true, composed: true }));
           
-          // Verify
-          if (el.textContent?.includes(text.slice(0, 10))) return true;
+          return true; // Successfully injected
         }
-      } catch {
-        continue;
+      } catch (e) {
+        console.warn("Injection failed for element", el, e);
       }
     }
   }
