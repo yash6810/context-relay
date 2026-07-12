@@ -44,6 +44,7 @@ function createContainer(): HTMLElement {
 
   const container = document.createElement("div");
   container.id = "context-relay-root";
+  container.className = "cr-container";
   container.style.cssText = `
     all: initial;
     position: fixed;
@@ -393,6 +394,28 @@ function createStyles(): HTMLStyleElement {
     @keyframes cr-fade-out {
       to { opacity: 0; transform: translateY(8px); }
     }
+
+    /* --- Dark Mode --- */
+    .cr-container.dark .cr-panel { background: #1a1a2e; color: #f3f4f6; }
+    .cr-container.dark .cr-panel-header { background: #161626; border-bottom-color: #374151; }
+    .cr-container.dark .cr-close-btn { color: #9ca3af; }
+    .cr-container.dark .cr-close-btn:hover { background: #374151; color: #f3f4f6; }
+    .cr-container.dark .cr-search { border-bottom-color: #374151; }
+    .cr-container.dark .cr-search-input { background: #1a1a2e; border-color: #374151; color: #f3f4f6; }
+    .cr-container.dark .cr-search-input:focus { border-color: #7c3aed; box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2); }
+    .cr-container.dark .cr-list-empty { color: #6b7280; }
+    .cr-container.dark .cr-project-item:hover { background: #2d2d44; }
+    .cr-container.dark .cr-project-name { color: #f3f4f6; }
+    .cr-container.dark .cr-project-task { color: #9ca3af; }
+    .cr-container.dark .cr-primer-item { border-color: #374151; }
+    .cr-container.dark .cr-primer-item:hover { background: #2d2d44; border-color: #7c3aed; }
+    .cr-container.dark .cr-primer-date { color: #9ca3af; }
+    .cr-container.dark .cr-primer-preview { color: #d1d5db; }
+    .cr-container.dark .cr-capture-divider { background: #374151; }
+    .cr-container.dark .cr-capture-title { color: #f3f4f6; }
+    .cr-container.dark .cr-platform-btn { background: #161626; border-color: #374151; }
+    .cr-container.dark .cr-platform-btn:hover:not(:disabled) { background: #2d2d44; border-color: #7c3aed; }
+    .cr-container.dark .cr-platform-label { color: #9ca3af; }
   `;
   return style;
 }
@@ -498,9 +521,24 @@ function injectRelayButton(inputSelectors: string[], captureFn?: () => string) {
 
   // Close panel when clicking outside
   document.addEventListener("click", (e) => {
-    const target = e.target as Node;
-    if (!container.contains(target) && !btn.contains(target)) {
+    const path = e.composedPath();
+    if (!path.includes(container) && !path.includes(btn)) {
       panel.classList.remove("open");
+    }
+  });
+
+  // Setup theme listener
+  const THEME_KEY = "context-relay-theme";
+  chrome.storage.local.get(THEME_KEY, (res) => {
+    if (res[THEME_KEY] === "dark") container.classList.add("dark");
+  });
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === "local" && changes[THEME_KEY]) {
+      if (changes[THEME_KEY].newValue === "dark") {
+        container.classList.add("dark");
+      } else {
+        container.classList.remove("dark");
+      }
     }
   });
 
