@@ -6,6 +6,25 @@ To satisfy the hackathon requirements for running on AMD hardware, we use **vLLM
 
 ---
 
+## 🚀 How to Run for Free (Student & Hackathon Guide)
+
+If you are a student or participating in a hackathon and do not want to pay for cloud GPU costs, you have two main options:
+
+### Option A: Use a Hackathon Promo Code (Cloud)
+If you are participating in an AMD-sponsored hackathon, the organizers provide free access to the AMD Developer Cloud.
+1. Check the official hackathon Discord, Slack, or welcome email for an **AMD Developer Cloud Promo Code**.
+2. When signing up at [aac.amd.com](https://aac.amd.com/), look for the promo code or coupon field during registration or in the billing section.
+3. Enter the code to receive free credits (often $50-$500 depending on the event), which is more than enough to run your instance for the duration of the hackathon.
+4. *Alternatively*, if there is no code, you can fill out the [AMD Academic/Researcher access form](https://www.amd.com/en/technologies/researcher-cloud.html) with your `.edu` email to request free credits.
+
+### Option B: Run Locally on your own AMD GPU (Zero Cost)
+If you already own an AMD Radeon gaming GPU (e.g., RX 6800, RX 7900 XTX, etc.), you can run the ROCm Docker containers completely for free on your own machine.
+1. **Linux Users:** Ensure you have the [latest AMDGPU proprietary drivers and ROCm installed](https://rocm.docs.amd.com/projects/install-on-linux/en/latest/).
+2. **Windows Users:** Install [Windows Subsystem for Linux (WSL2)](https://learn.microsoft.com/en-us/windows/wsl/install) and follow the [ROCm on WSL2 guide](https://rocm.docs.amd.com/en/latest/how_to/wsl2_install/wsl2_install.html).
+3. Once installed, you can skip Step 1 and 2 below, and directly run the Docker commands in Step 3 and 4 on your own computer (replacing `<YOUR_INSTANCE_PUBLIC_IP>` with `127.0.0.1` or `localhost`).
+
+---
+
 ## Step 1: Provision an AMD Developer Cloud Instance
 
 If you are not familiar with the AMD Developer Cloud, follow these steps to get a server running:
